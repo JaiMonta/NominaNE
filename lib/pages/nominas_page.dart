@@ -294,6 +294,22 @@ class _NominaDetalleState extends State<_NominaDetalle> {
                     ]),
                   ]),
                 ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Aportes patronales (empresa)',
+                          style: Theme.of(context).textTheme.titleSmall),
+                      Text('IVSS: ${money.format(r.aporteIvss)} Bs'),
+                      Text('RPE: ${money.format(r.aporteRpe)} Bs'),
+                      Text('FAOV: ${money.format(r.aporteFaov)} Bs'),
+                      Text('LOPCYMAT: ${money.format(r.aporteLopcymat)} Bs'),
+                      Text('Total: ${money.format(r.aportes)} Bs',
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -323,7 +339,7 @@ class _NominaDetalleState extends State<_NominaDetalle> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('${n.nombre} · ${fecha(n.inicio)} a ${fecha(n.fin)}',
                     style: Theme.of(context).textTheme.titleMedium),
-                Text('Aportes patronales (IVSS, RPE, FAOV, LOPCYMAT): ${money.format(n.totalAportes)}',
+                Text('Aportes patronales — IVSS ${money.format(n.totalAporteIvss)} · RPE ${money.format(n.totalAporteRpe)} · FAOV ${money.format(n.totalAporteFaov)} · LOPCYMAT ${money.format(n.totalAporteLopcymat)}  (Total ${money.format(n.totalAportes)})',
                     style: Theme.of(context).textTheme.bodySmall),
               ]),
             ),

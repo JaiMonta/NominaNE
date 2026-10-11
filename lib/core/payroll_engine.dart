@@ -50,8 +50,13 @@ class ResultadoRecibo {
   final List<LineaRecibo> lineas;
   final double salarioDiario, totalIngresos, totalEgresos, neto;
   final double aportesPatronales;
+  final double aporteIvss, aporteRpe, aporteFaov, aporteLopcymat;
   ResultadoRecibo(this.lineas, this.salarioDiario, this.totalIngresos,
-      this.totalEgresos, this.neto, this.aportesPatronales);
+      this.totalEgresos, this.neto, this.aportesPatronales,
+      {this.aporteIvss = 0,
+      this.aporteRpe = 0,
+      this.aporteFaov = 0,
+      this.aporteLopcymat = 0});
 }
 
 double r2(double v) => (v * 100).roundToDouble() / 100;
@@ -238,12 +243,18 @@ class PayrollEngine {
     final totI = r2(lineas.where((l) => l.tipo == 'ingreso').fold<double>(0, (s, l) => s + l.monto));
     final totE = r2(lineas.where((l) => l.tipo == 'egreso').fold<double>(0, (s, l) => s + l.monto));
 
-    // Aportes patronales
-    final aportes = r2(baseIvss * _g('ivss_patrono_pct', .09) +
-        baseSalarial * _g('rpe_patrono_pct', .02) +
-        baseSalarial * _g('faov_patrono_pct', .02) +
-        baseSalarial * (riesgoLopcymat > 0 ? riesgoLopcymat : _g('lopcymat_patrono_pct', .0075)));
+    // Aportes patronales (desglosados por concepto)
+    final aIvss = r2(baseIvss * _g('ivss_patrono_pct', .09));
+    final aRpe = r2(baseSalarial * _g('rpe_patrono_pct', .02));
+    final aFaov = r2(baseSalarial * _g('faov_patrono_pct', .02));
+    final aLop = r2(baseSalarial *
+        (riesgoLopcymat > 0 ? riesgoLopcymat : _g('lopcymat_patrono_pct', .0075)));
+    final aportes = r2(aIvss + aRpe + aFaov + aLop);
 
-    return ResultadoRecibo(lineas, r2(sd), totI, totE, r2(totI - totE), aportes);
+    return ResultadoRecibo(lineas, r2(sd), totI, totE, r2(totI - totE), aportes,
+        aporteIvss: aIvss,
+        aporteRpe: aRpe,
+        aporteFaov: aFaov,
+        aporteLopcymat: aLop);
   }
 }

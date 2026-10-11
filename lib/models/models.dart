@@ -120,6 +120,7 @@ class Nomina {
   final String nombre, frecuencia, estado;
   final DateTime inicio, fin;
   final double totalIngresos, totalEgresos, totalNeto, totalAportes;
+  final double totalAporteIvss, totalAporteRpe, totalAporteFaov, totalAporteLopcymat;
   final double? tasaBcv;
 
   Nomina.fromJson(Map<String, dynamic> j)
@@ -133,6 +134,10 @@ class Nomina {
         totalEgresos = _d(j['total_egresos']),
         totalNeto = _d(j['total_neto']),
         totalAportes = _d(j['total_aportes_patronales']),
+        totalAporteIvss = _d(j['total_aporte_ivss']),
+        totalAporteRpe = _d(j['total_aporte_rpe']),
+        totalAporteFaov = _d(j['total_aporte_faov']),
+        totalAporteLopcymat = _d(j['total_aporte_lopcymat']),
         tasaBcv = j['tasa_bcv'] == null ? null : _d(j['tasa_bcv']);
 }
 
@@ -142,6 +147,7 @@ class Recibo {
   final String nombreEmpleado, cedula;
   final double ingresos, egresos, neto, aportes;
   final double salarioMensualUsd, ingresosUsd, egresosUsd, netoUsd;
+  final double aporteIvss, aporteRpe, aporteFaov, aporteLopcymat;
   final double? tasaBcv;
 
   Recibo.fromJson(Map<String, dynamic> j)
@@ -159,5 +165,9 @@ class Recibo {
         ingresosUsd = _d(j['total_ingresos_usd']),
         egresosUsd = _d(j['total_egresos_usd']),
         netoUsd = _d(j['neto_usd']),
+        aporteIvss = _d(j['aporte_ivss_patronal']),
+        aporteRpe = _d(j['aporte_rpe_patronal']),
+        aporteFaov = _d(j['aporte_faov_patronal']),
+        aporteLopcymat = _d(j['aporte_lopcymat_patronal']),
         tasaBcv = j['tasa_bcv'] == null ? null : _d(j['tasa_bcv']);
 }

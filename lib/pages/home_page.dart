@@ -17,6 +17,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _i = 0;
   String _rol = 'consulta';
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -27,6 +28,15 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final puedeEditar = _rol == 'admin' || _rol == 'rrhh';
+    final email = Supabase.instance.client.auth.currentUser?.email ?? '';
+    final destinos = <(IconData, String)>[
+      (Icons.people, 'Empleados'),
+      (Icons.list_alt, 'Conceptos'),
+      (Icons.edit_note, 'Novedades'),
+      (Icons.payments, 'Nóminas'),
+      (Icons.gavel, 'Parámetros'),
+      (Icons.currency_exchange, 'Tasas'),
+    ];
     final paginas = <Widget>[
       EmpleadosPage(puedeEditar: puedeEditar),
       ConceptosPage(puedeEditar: puedeEditar),
@@ -35,35 +45,83 @@ class _HomePageState extends State<HomePage> {
       ParametrosPage(puedeEditar: puedeEditar),
       TasasPage(puedeEditar: puedeEditar),
     ];
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Nómina · LOT / LOPCYMAT'),
-        actions: [
-          Center(child: Text(Supabase.instance.client.auth.currentUser?.email ?? '')),
-          Chip(label: Text(_rol)),
-          IconButton(
-              tooltip: 'Salir',
-              icon: const Icon(Icons.logout),
-              onPressed: () => Supabase.instance.client.auth.signOut()),
-        ],
-      ),
-      body: Row(children: [
-        NavigationRail(
-          selectedIndex: _i,
-          onDestinationSelected: (v) => setState(() => _i = v),
-          labelType: NavigationRailLabelType.all,
-          destinations: const [
-            NavigationRailDestination(icon: Icon(Icons.people), label: Text('Empleados')),
-            NavigationRailDestination(icon: Icon(Icons.list_alt), label: Text('Conceptos')),
-            NavigationRailDestination(icon: Icon(Icons.edit_note), label: Text('Novedades')),
-            NavigationRailDestination(icon: Icon(Icons.payments), label: Text('Nóminas')),
-            NavigationRailDestination(icon: Icon(Icons.gavel), label: Text('Parámetros')),
-            NavigationRailDestination(icon: Icon(Icons.currency_exchange), label: Text('Tasas')),
+
+    return LayoutBuilder(builder: (context, c) {
+      final esMovil = c.maxWidth < 800;
+      final body = esMovil
+          ? paginas[_i]
+          : Row(children: [
+              NavigationRail(
+                selectedIndex: _i,
+                onDestinationSelected: (v) => setState(() => _i = v),
+                labelType: NavigationRailLabelType.all,
+                destinations: [
+                  for (final d in destinos)
+                    NavigationRailDestination(icon: Icon(d.$1), label: Text(d.$2)),
+                ],
+              ),
+              const VerticalDivider(width: 1),
+              Expanded(child: paginas[_i]),
+            ]);
+      return Scaffold(
+        key: _scaffoldKey,
+        appBar: AppBar(
+          title: const Text('Nómina · LOT / LOPCYMAT'),
+          leading: esMovil
+              ? IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => _scaffoldKey.currentState?.openDrawer())
+              : null,
+          actions: [
+            if (!esMovil)
+              Center(
+                  child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(email))),
+            Chip(label: Text(_rol)),
+            IconButton(
+                tooltip: 'Salir',
+                icon: const Icon(Icons.logout),
+                onPressed: () => Supabase.instance.client.auth.signOut()),
           ],
         ),
-        const VerticalDivider(width: 1),
-        Expanded(child: paginas[_i]),
-      ]),
-    );
+        drawer: esMovil
+            ? Drawer(
+                child: SafeArea(
+                  child: ListView(
+                    children: [
+                      DrawerHeader(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('Nómina',
+                                style: TextStyle(
+                                    fontSize: 20, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            Text(email, style: const TextStyle(fontSize: 12)),
+                            const SizedBox(height: 4),
+                            Chip(label: Text(_rol)),
+                          ],
+                        ),
+                      ),
+                      for (var i = 0; i < destinos.length; i++)
+                        ListTile(
+                          selected: _i == i,
+                          leading: Icon(destinos[i].$1),
+                          title: Text(destinos[i].$2),
+                          onTap: () {
+                            setState(() => _i = i);
+                            Navigator.pop(context);
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+              )
+            : null,
+        body: body,
+      );
+    });
   }
 }

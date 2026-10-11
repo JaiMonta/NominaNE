@@ -202,6 +202,7 @@ class Repo {
     }).select().single();
 
     double tI = 0, tE = 0, tN = 0, tA = 0;
+    double tIvss = 0, tRpe = 0, tFaov = 0, tLop = 0;
     for (final e in emps) {
       // Montos de novedades en USD -> VES (0 = lo calcula el motor).
       final novs = nov
@@ -238,6 +239,10 @@ class Repo {
         'total_egresos_usd': r2(r.totalEgresos / tasaBcv),
         'neto_usd': r2(r.neto / tasaBcv),
         'aportes_patronales': r.aportesPatronales,
+        'aporte_ivss_patronal': r.aporteIvss,
+        'aporte_rpe_patronal': r.aporteRpe,
+        'aporte_faov_patronal': r.aporteFaov,
+        'aporte_lopcymat_patronal': r.aporteLopcymat,
       }).select().single();
       await db.from('recibo_detalle').insert([
         for (final l in r.lineas)
@@ -256,12 +261,20 @@ class Repo {
       tE += r.totalEgresos;
       tN += r.neto;
       tA += r.aportesPatronales;
+      tIvss += r.aporteIvss;
+      tRpe += r.aporteRpe;
+      tFaov += r.aporteFaov;
+      tLop += r.aporteLopcymat;
     }
     await db.from('nominas').update({
       'total_ingresos': r2(tI),
       'total_egresos': r2(tE),
       'total_neto': r2(tN),
       'total_aportes_patronales': r2(tA),
+      'total_aporte_ivss': r2(tIvss),
+      'total_aporte_rpe': r2(tRpe),
+      'total_aporte_faov': r2(tFaov),
+      'total_aporte_lopcymat': r2(tLop),
     }).eq('id', nom['id']);
     return emps.length;
   }
