@@ -1,0 +1,20 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nomina_app/core/payroll_engine.dart';
+
+void main() {
+  test('r2 redondea a 2 decimales', () {
+    expect(r2(1.236), 1.24);
+    expect(r2(10.0), 10.0);
+  });
+
+  test('días de vacaciones aumentan por año con tope', () {
+    final e = PayrollEngine({
+      'vacaciones_dias_base': 15,
+      'vacaciones_dia_adicional': 1,
+      'vacaciones_dias_max': 30,
+    });
+    expect(e.diasVacaciones(0), 0);
+    expect(e.diasVacaciones(1), 15);
+    expect(e.diasVacaciones(20), 30);
+  });
+}
