@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../core/responsive.dart';
+import '../core/theme.dart';
 import '../models/models.dart';
 import '../services/repo.dart';
 
@@ -32,12 +34,14 @@ class _ConceptosPageState extends State<ConceptosPage> {
           builder: (_, s) {
             if (s.hasError) return Center(child: Text('Error: ${s.error}'));
             if (!s.hasData) return const Center(child: CircularProgressIndicator());
-            return ListView(children: [
+            return ListView(
+              padding: const EdgeInsets.only(bottom: 88),
+              children: [
               for (final c in s.data!)
                 ListTile(
                   leading: Icon(
                       c.tipo == 'ingreso' ? Icons.add_circle : Icons.remove_circle,
-                      color: c.tipo == 'ingreso' ? Colors.green : Colors.red),
+                      color: c.tipo == 'ingreso' ? Paleta.ingreso : Paleta.egreso),
                   title: Text('${c.codigo} · ${c.nombre}'),
                   subtitle: Text([
                     c.tipo,
@@ -83,7 +87,7 @@ class _ConceptoDialogState extends State<_ConceptoDialog> {
   Widget build(BuildContext context) => AlertDialog(
         title: Text(c.id == null ? 'Nuevo concepto' : 'Editar concepto'),
         content: SizedBox(
-          width: 420,
+          width: anchoDialogo(context, 420),
           child: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               TextFormField(
@@ -134,7 +138,8 @@ class _ConceptoDialogState extends State<_ConceptoDialog> {
                   title: const Text('Activo'),
                   value: c.activo,
                   onChanged: (v) => setState(() => c.activo = v)),
-              if (_err != null) Text(_err!, style: const TextStyle(color: Colors.red)),
+              if (_err != null)
+                Text(_err!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ]),
           ),
         ),

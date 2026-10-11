@@ -70,15 +70,17 @@ class _ParametrosPageState extends State<ParametrosPage> {
           if (!s.hasData) return const Center(child: CircularProgressIndicator());
           final aj = s.data![0] as List<Map<String, dynamic>>;
           final ps = s.data![1] as List<Map<String, dynamic>>;
-          return ListView(children: [
+          return ListView(
+            padding: const EdgeInsets.only(bottom: 88),
+            children: [
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Text('Empresa', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text('Datos que aparecen en recibos y PDF.',
-                  style: TextStyle(color: Colors.black54)),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
             ),
             for (final a in aj)
               ListTile(
@@ -88,13 +90,13 @@ class _ParametrosPageState extends State<ParametrosPage> {
                 onTap: widget.puedeEditar ? () => _editarTexto(a) : null,
               ),
             const Divider(),
-            const Padding(
-              padding: EdgeInsets.all(16),
+            Padding(
+              padding: const EdgeInsets.all(16),
               child: Text(
                   'Aviso: la LOT adjunta (1997) fue reemplazada por la LOTTT (2012). '
                   'Los porcentajes de IVSS, RPE y FAOV no provienen de los documentos adjuntos. '
                   'Valide cada parámetro con la normativa vigente antes de pagar.',
-                  style: TextStyle(color: Colors.deepOrange)),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ),
             for (final p in ps)
               ListTile(

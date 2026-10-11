@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../core/theme.dart';
 import '../services/repo.dart';
 import 'conceptos_page.dart';
 import 'empleados_page.dart';
@@ -78,7 +79,15 @@ class _HomePageState extends State<HomePage> {
                   child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       child: Text(email))),
-            Chip(label: Text(_rol)),
+            if (!esMovil) Chip(label: Text(_rol)),
+            ValueListenableBuilder<ThemeMode>(
+              valueListenable: modoTema,
+              builder: (_, __, ___) => IconButton(
+                tooltip: 'Tema',
+                icon: Icon(iconoModoTema),
+                onPressed: alternarModoTema,
+              ),
+            ),
             IconButton(
                 tooltip: 'Salir',
                 icon: const Icon(Icons.logout),

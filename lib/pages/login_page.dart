@@ -36,37 +36,56 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 380),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text('Nómina', style: Theme.of(context).textTheme.headlineMedium),
-                  const SizedBox(height: 16),
-                  TextField(
-                      controller: _email,
-                      decoration: const InputDecoration(labelText: 'Correo')),
-                  TextField(
-                      controller: _pass,
-                      obscureText: true,
-                      onSubmitted: (_) => _enviar(),
-                      decoration: const InputDecoration(labelText: 'Contraseña')),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                      onPressed: _cargando ? null : _enviar,
-                      child: Text(_registro ? 'Registrarme' : 'Entrar')),
-                  TextButton(
-                      onPressed: () => setState(() => _registro = !_registro),
-                      child: Text(_registro
-                          ? 'Ya tengo cuenta'
-                          : 'Crear cuenta (el primer usuario es administrador)')),
-                  if (_msg != null)
-                    Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(_msg!, style: const TextStyle(color: Colors.red))),
-                ]),
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 380),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Text('Nómina', style: Theme.of(context).textTheme.headlineMedium),
+                      const SizedBox(height: 4),
+                      Text('LOT / LOPCYMAT',
+                          style: Theme.of(context).textTheme.bodySmall),
+                      const SizedBox(height: 16),
+                      TextField(
+                          controller: _email,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: const InputDecoration(labelText: 'Correo')),
+                      TextField(
+                          controller: _pass,
+                          obscureText: true,
+                          onSubmitted: (_) => _enviar(),
+                          decoration: const InputDecoration(labelText: 'Contraseña')),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                            onPressed: _cargando ? null : _enviar,
+                            child: _cargando
+                                ? const SizedBox(
+                                    height: 18,
+                                    width: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2))
+                                : Text(_registro ? 'Registrarme' : 'Entrar')),
+                      ),
+                      TextButton(
+                          onPressed: () => setState(() => _registro = !_registro),
+                          child: Text(_registro
+                              ? 'Ya tengo cuenta'
+                              : 'Crear cuenta (el primer usuario es administrador)')),
+                      if (_msg != null)
+                        Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(_msg!,
+                                style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error))),
+                    ]),
+                  ),
+                ),
               ),
             ),
           ),

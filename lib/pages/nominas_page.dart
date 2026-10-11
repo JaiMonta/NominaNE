@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../core/responsive.dart';
+import '../core/theme.dart';
 import '../models/models.dart';
 import '../services/pdf_service.dart';
 import '../services/repo.dart';
@@ -45,7 +47,9 @@ class _NominasPageState extends State<NominasPage> {
           if (s.hasError) return Center(child: Text('Error: ${s.error}'));
           if (!s.hasData) return const Center(child: CircularProgressIndicator());
           if (s.data!.isEmpty) return const Center(child: Text('Aún no hay nóminas'));
-          return ListView(children: [
+          return ListView(
+            padding: const EdgeInsets.only(bottom: 88),
+            children: [
             for (final n in s.data!)
               ListTile(
                 title: Text('${n.nombre} (${n.frecuencia})'),
@@ -132,7 +136,7 @@ class _NuevaNominaState extends State<_NuevaNomina> {
   Widget build(BuildContext context) => AlertDialog(
         title: const Text('Generar nómina'),
         content: SizedBox(
-          width: 420,
+          width: anchoDialogo(context, 420),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(
                 decoration: const InputDecoration(labelText: 'Nombre (ej. 1ra quincena octubre)'),
@@ -178,7 +182,8 @@ class _NuevaNominaState extends State<_NuevaNomina> {
                   ? const Text('Regístrela en la pestaña "Tasas"')
                   : null,
             ),
-            if (_err != null) Text(_err!, style: const TextStyle(color: Colors.red)),
+            if (_err != null)
+              Text(_err!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             if (_busy) const Padding(padding: EdgeInsets.only(top: 12), child: LinearProgressIndicator()),
           ]),
         ),
@@ -254,7 +259,7 @@ class _NominaDetalleState extends State<_NominaDetalle> {
       builder: (_) => AlertDialog(
         title: Text('Recibo · ${r.nombreEmpleado} (${r.cedula})'),
         content: SizedBox(
-          width: 640,
+          width: anchoDialogo(context, 640),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -264,9 +269,14 @@ class _NominaDetalleState extends State<_NominaDetalle> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text('Tasa BCV: ${r.tasaBcv == null ? '—' : '${usd.format(r.tasaBcv!)} Bs/USD'}'),
                 ),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(columns: const [
+                if (esMovil(context)) ...[
+                  for (final d in det) _conceptoCard(d),
+                  const SizedBox(height: 8),
+                  _totalesCard(r),
+                ] else
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(columns: const [
                     DataColumn(label: Text('Concepto')),
                     DataColumn(label: Text('Cant.'), numeric: true),
                     DataColumn(label: Text('Ingreso (Bs)'), numeric: true),
@@ -325,6 +335,62 @@ class _NominaDetalleState extends State<_NominaDetalle> {
       ),
     );
   }
+
+  Widget _conceptoCard(Map<String, dynamic> d) {
+    final ing = d['tipo'] == 'ingreso';
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: ListTile(
+        dense: true,
+        title: Text(d['concepto_nombre'] ?? ''),
+        subtitle: Text('Cant: ${d['cantidad']}'),
+        trailing: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text('${ing ? '+' : '-'} ${money.format(d['monto'])} Bs',
+                style: TextStyle(
+                    color: ing ? Paleta.ingreso : Paleta.egreso,
+                    fontWeight: FontWeight.w600)),
+            Text('US\$ ${usd.format(d['monto_usd'] ?? 0)}',
+                style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _filaResumen(String label, String bs, String us, {bool bold = false}) {
+    final estilo = bold ? const TextStyle(fontWeight: FontWeight.bold) : null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(children: [
+        Expanded(child: Text(label, style: estilo)),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text(bs, style: estilo),
+          Text(us, style: Theme.of(context).textTheme.bodySmall),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _totalesCard(Recibo r) => Card(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            _filaResumen('Ingresos', '${money.format(r.ingresos)} Bs',
+                'US\$ ${usd.format(r.ingresosUsd)}'),
+            _filaResumen('Egresos', '${money.format(r.egresos)} Bs',
+                'US\$ ${usd.format(r.egresosUsd)}'),
+            const Divider(),
+            _filaResumen('NETO A PAGAR', '${money.format(r.neto)} Bs',
+                'US\$ ${usd.format(r.netoUsd)}',
+                bold: true),
+          ]),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {

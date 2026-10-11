@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../core/responsive.dart';
+import '../core/theme.dart';
 import '../models/models.dart';
 import '../services/repo.dart';
 
@@ -38,6 +40,36 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
             if (!s.hasData) return const Center(child: CircularProgressIndicator());
             final l = s.data!;
             if (l.isEmpty) return const Center(child: Text('Sin empleados'));
+            if (esMovil(context)) {
+              return ListView(
+                padding: const EdgeInsets.only(top: 4, bottom: 88),
+                children: [
+                  for (final e in l)
+                    Card(
+                      child: ListTile(
+                        title: Text(e.nombreCompleto),
+                        subtitle: Text(
+                            '${e.cedula} · ${e.cargo ?? ''}\n${e.tipo} · ${e.frecuenciaPago}'),
+                        isThreeLine: true,
+                        trailing: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text('US\$ ${usd.format(e.salarioMensualUsd)}',
+                                style: const TextStyle(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            Icon(e.activo ? Icons.check_circle : Icons.cancel,
+                                size: 18,
+                                color: e.activo ? Paleta.ingreso : Paleta.egreso),
+                          ],
+                        ),
+                        onTap: widget.puedeEditar ? () => _editar(e) : null,
+                      ),
+                    ),
+                ],
+              );
+            }
             return SingleChildScrollView(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -128,7 +160,7 @@ class _EmpleadoDialogState extends State<_EmpleadoDialog> {
   Widget build(BuildContext context) => AlertDialog(
         title: Text(e.id == null ? 'Nuevo empleado' : 'Editar empleado'),
         content: SizedBox(
-          width: 460,
+          width: anchoDialogo(context, 460),
           child: Form(
             key: _k,
             child: SingleChildScrollView(
@@ -163,7 +195,7 @@ class _EmpleadoDialogState extends State<_EmpleadoDialog> {
                     value: e.activo,
                     onChanged: (v) => setState(() => e.activo = v)),
                 if (_err != null)
-                  Text(_err!, style: const TextStyle(color: Colors.red)),
+                  Text(_err!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
               ]),
             ),
           ),

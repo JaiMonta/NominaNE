@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/responsive.dart';
 import '../services/repo.dart';
 
 class TasasPage extends StatefulWidget {
@@ -31,14 +32,16 @@ class _TasasPageState extends State<TasasPage> {
           builder: (_, s) {
             if (s.hasError) return Center(child: Text('Error: ${s.error}'));
             if (!s.hasData) return const Center(child: CircularProgressIndicator());
-            return ListView(children: [
-              const Padding(
-                padding: EdgeInsets.all(16),
+            return ListView(
+              padding: const EdgeInsets.only(bottom: 88),
+              children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
                 child: Text(
                     'Tasa oficial del BCV (Bs por USD) usada para convertir la '
                     'nómina a Bolívares (VES). Cargue la tasa del día; para una '
                     'nómina se usa la tasa más reciente con fecha <= al cierre del período.',
-                    style: TextStyle(color: Colors.black54)),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               ),
               if (s.data!.isEmpty)
                 const Center(child: Padding(
@@ -101,7 +104,7 @@ class _TasaDialogState extends State<_TasaDialog> {
   Widget build(BuildContext context) => AlertDialog(
         title: const Text('Tasa BCV (Bs por USD)'),
         content: SizedBox(
-          width: 380,
+          width: anchoDialogo(context, 380),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -117,7 +120,8 @@ class _TasaDialogState extends State<_TasaDialog> {
             TextField(
                 decoration: const InputDecoration(labelText: 'Fuente'),
                 onChanged: (v) => fuente = v),
-            if (_err != null) Text(_err!, style: const TextStyle(color: Colors.red)),
+            if (_err != null)
+              Text(_err!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ]),
         ),
         actions: [

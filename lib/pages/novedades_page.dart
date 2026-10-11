@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/responsive.dart';
 import '../models/models.dart';
 import '../services/repo.dart';
 
@@ -43,7 +44,9 @@ class _NovedadesPageState extends State<NovedadesPage> {
               return const Center(
                   child: Text('Sin novedades (horas extra, bonos, préstamos, vacaciones...)'));
             }
-            return ListView(children: [
+            return ListView(
+              padding: const EdgeInsets.only(bottom: 88),
+              children: [
               for (final n in s.data!)
                 ListTile(
                   title: Text(
@@ -114,7 +117,7 @@ class _NovedadDialogState extends State<_NovedadDialog> {
   Widget build(BuildContext context) => AlertDialog(
         title: const Text('Nueva novedad'),
         content: SizedBox(
-          width: 440,
+          width: anchoDialogo(context, 440),
           child: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               DropdownButtonFormField<String>(
@@ -165,7 +168,8 @@ class _NovedadDialogState extends State<_NovedadDialog> {
               TextFormField(
                   decoration: const InputDecoration(labelText: 'Nota'),
                   onChanged: (v) => nota = v),
-              if (_err != null) Text(_err!, style: const TextStyle(color: Colors.red)),
+              if (_err != null)
+                Text(_err!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ]),
           ),
         ),
