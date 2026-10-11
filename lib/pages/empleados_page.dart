@@ -39,8 +39,8 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
             final l = s.data!;
             if (l.isEmpty) return const Center(child: Text('Sin empleados'));
             return SingleChildScrollView(
-              child: SizedBox(
-                width: double.infinity,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
                 child: DataTable(
                   columns: const [
                     DataColumn(label: Text('Cédula')),

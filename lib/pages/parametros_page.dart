@@ -9,7 +9,32 @@ class ParametrosPage extends StatefulWidget {
 }
 
 class _ParametrosPageState extends State<ParametrosPage> {
-  late Future<List<Map<String, dynamic>>> _f = Repo.parametros();
+  late Future<List<Object>> _f = _load();
+
+  Future<List<Object>> _load() async =>
+      [await Repo.ajustes(), await Repo.parametros()];
+
+  Future<void> _editarTexto(Map<String, dynamic> a) async {
+    final ctl = TextEditingController(text: '${a['valor'] ?? ''}');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(a['clave']),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(a['descripcion'] ?? ''),
+          TextField(controller: ctl, decoration: const InputDecoration(labelText: 'Valor')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Guardar')),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await Repo.guardarAjuste(a['clave'], ctl.text.trim());
+      setState(() => _f = _load());
+    }
+  }
 
   Future<void> _editar(Map<String, dynamic> p) async {
     final ctl = TextEditingController(text: '${p['valor']}');
@@ -32,18 +57,37 @@ class _ParametrosPageState extends State<ParametrosPage> {
       final v = double.tryParse(ctl.text.replaceAll(',', '.'));
       if (v != null) {
         await Repo.guardarParametro(p['clave'], v);
-        setState(() => _f = Repo.parametros());
+        setState(() => _f = _load());
       }
     }
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<Map<String, dynamic>>>(
+  Widget build(BuildContext context) => FutureBuilder<List<Object>>(
         future: _f,
         builder: (_, s) {
           if (s.hasError) return Center(child: Text('Error: ${s.error}'));
           if (!s.hasData) return const Center(child: CircularProgressIndicator());
+          final aj = s.data![0] as List<Map<String, dynamic>>;
+          final ps = s.data![1] as List<Map<String, dynamic>>;
           return ListView(children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Text('Empresa', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text('Datos que aparecen en recibos y PDF.',
+                  style: TextStyle(color: Colors.black54)),
+            ),
+            for (final a in aj)
+              ListTile(
+                leading: const Icon(Icons.business),
+                title: Text('${a['clave']} = ${(a['valor'] ?? '').toString().isEmpty ? '—' : a['valor']}'),
+                subtitle: Text(a['descripcion'] ?? ''),
+                onTap: widget.puedeEditar ? () => _editarTexto(a) : null,
+              ),
+            const Divider(),
             const Padding(
               padding: EdgeInsets.all(16),
               child: Text(
@@ -52,7 +96,7 @@ class _ParametrosPageState extends State<ParametrosPage> {
                   'Valide cada parámetro con la normativa vigente antes de pagar.',
                   style: TextStyle(color: Colors.deepOrange)),
             ),
-            for (final p in s.data!)
+            for (final p in ps)
               ListTile(
                 title: Text('${p['clave']} = ${p['valor']}'),
                 subtitle: Text('${p['descripcion'] ?? ''}  [${p['referencia_legal'] ?? ''}]'),

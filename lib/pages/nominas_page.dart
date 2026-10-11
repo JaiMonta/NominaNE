@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
+import '../services/pdf_service.dart';
 import '../services/repo.dart';
 import 'empleados_page.dart' show money, usd;
 
@@ -207,6 +208,44 @@ class _NominaDetalleState extends State<_NominaDetalle> {
     setState(() => estado = e);
   }
 
+  Future<void> _pdfRecibo(Recibo r, List<Map<String, dynamic>> det) async {
+    try {
+      final empresa = await Repo.ajuste('empresa_nombre');
+      final rif = await Repo.ajuste('empresa_rif');
+      await emitirReciboPdf(
+          nomina: widget.nomina, recibo: r, detalle: det, empresa: empresa, rif: rif);
+    } catch (x) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error al generar PDF: $x')));
+      }
+    }
+  }
+
+  Future<void> _pdfReciboPorId(Recibo r) async {
+    final det = await Repo.detalle(r.id);
+    await _pdfRecibo(r, det);
+  }
+
+  Future<void> _pdfNomina() async {
+    try {
+      final recibos = await Repo.recibos(widget.nomina.id);
+      final items = <ReciboPdfData>[];
+      for (final r in recibos) {
+        items.add(ReciboPdfData(r, await Repo.detalle(r.id)));
+      }
+      final empresa = await Repo.ajuste('empresa_nombre');
+      final rif = await Repo.ajuste('empresa_rif');
+      await emitirNominaPdf(
+          nomina: widget.nomina, items: items, empresa: empresa, rif: rif);
+    } catch (x) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error al generar PDF: $x')));
+      }
+    }
+  }
+
   Future<void> _ver(Recibo r) async {
     final det = await Repo.detalle(r.id);
     if (!mounted) return;
@@ -225,38 +264,48 @@ class _NominaDetalleState extends State<_NominaDetalle> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text('Tasa BCV: ${r.tasaBcv == null ? '—' : '${usd.format(r.tasaBcv!)} Bs/USD'}'),
                 ),
-                DataTable(columns: const [
-                  DataColumn(label: Text('Concepto')),
-                  DataColumn(label: Text('Cant.'), numeric: true),
-                  DataColumn(label: Text('Ingreso (Bs)'), numeric: true),
-                  DataColumn(label: Text('Egreso (Bs)'), numeric: true),
-                  DataColumn(label: Text('Ingreso (US\$)'), numeric: true),
-                  DataColumn(label: Text('Egreso (US\$)'), numeric: true),
-                ], rows: [
-                  for (final d in det)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(columns: const [
+                    DataColumn(label: Text('Concepto')),
+                    DataColumn(label: Text('Cant.'), numeric: true),
+                    DataColumn(label: Text('Ingreso (Bs)'), numeric: true),
+                    DataColumn(label: Text('Egreso (Bs)'), numeric: true),
+                    DataColumn(label: Text('Ingreso (US\$)'), numeric: true),
+                    DataColumn(label: Text('Egreso (US\$)'), numeric: true),
+                  ], rows: [
+                    for (final d in det)
+                      DataRow(cells: [
+                        DataCell(Tooltip(
+                            message: d['base_legal'] ?? '', child: Text(d['concepto_nombre']))),
+                        DataCell(Text('${d['cantidad']}')),
+                        DataCell(Text(d['tipo'] == 'ingreso' ? money.format(d['monto']) : '')),
+                        DataCell(Text(d['tipo'] == 'egreso' ? money.format(d['monto']) : '')),
+                        DataCell(Text(d['tipo'] == 'ingreso' ? usd.format(d['monto_usd'] ?? 0) : '')),
+                        DataCell(Text(d['tipo'] == 'egreso' ? usd.format(d['monto_usd'] ?? 0) : '')),
+                      ]),
                     DataRow(cells: [
-                      DataCell(Tooltip(
-                          message: d['base_legal'] ?? '', child: Text(d['concepto_nombre']))),
-                      DataCell(Text('${d['cantidad']}')),
-                      DataCell(Text(d['tipo'] == 'ingreso' ? money.format(d['monto']) : '')),
-                      DataCell(Text(d['tipo'] == 'egreso' ? money.format(d['monto']) : '')),
-                      DataCell(Text(d['tipo'] == 'ingreso' ? usd.format(d['monto_usd'] ?? 0) : '')),
-                      DataCell(Text(d['tipo'] == 'egreso' ? usd.format(d['monto_usd'] ?? 0) : '')),
+                      const DataCell(Text('NETO A PAGAR', style: TextStyle(fontWeight: FontWeight.bold))),
+                      const DataCell(Text('')),
+                      DataCell(Text(money.format(r.ingresos))),
+                      DataCell(Text('${money.format(r.egresos)}  =  ${money.format(r.neto)}')),
+                      DataCell(Text(usd.format(r.ingresosUsd))),
+                      DataCell(Text('${usd.format(r.egresosUsd)}  =  ${usd.format(r.netoUsd)}')),
                     ]),
-                  DataRow(cells: [
-                    const DataCell(Text('NETO A PAGAR', style: TextStyle(fontWeight: FontWeight.bold))),
-                    const DataCell(Text('')),
-                    DataCell(Text(money.format(r.ingresos))),
-                    DataCell(Text('${money.format(r.egresos)}  =  ${money.format(r.neto)}')),
-                    DataCell(Text(usd.format(r.ingresosUsd))),
-                    DataCell(Text('${usd.format(r.egresosUsd)}  =  ${usd.format(r.netoUsd)}')),
                   ]),
-                ]),
+                ),
               ],
             ),
           ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar'))],
+        actions: [
+          TextButton.icon(
+            onPressed: () => _pdfRecibo(r, det),
+            icon: const Icon(Icons.picture_as_pdf),
+            label: const Text('PDF'),
+          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar')),
+        ],
       ),
     );
   }
@@ -265,23 +314,39 @@ class _NominaDetalleState extends State<_NominaDetalle> {
   Widget build(BuildContext context) {
     final n = widget.nomina;
     return Column(children: [
-      ListTile(
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: widget.onBack),
-        title: Text('${n.nombre} · ${fecha(n.inicio)} a ${fecha(n.fin)}'),
-        subtitle: Text('Aportes patronales (IVSS, RPE, FAOV, LOPCYMAT): ${money.format(n.totalAportes)}'),
-        trailing: Wrap(spacing: 8, children: [
-          Chip(label: Text(estado)),
-          if (widget.puedeEditar && estado == 'borrador') ...[
-            FilledButton(onPressed: () => _estado('aprobada'), child: const Text('Aprobar')),
-            OutlinedButton(
-                onPressed: () async {
-                  await Repo.borrarNomina(n.id);
-                  widget.onBack();
-                },
-                child: const Text('Eliminar')),
-          ],
-          if (widget.puedeEditar && estado == 'aprobada')
-            FilledButton(onPressed: () => _estado('pagada'), child: const Text('Marcar pagada')),
+      Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            IconButton(icon: const Icon(Icons.arrow_back), onPressed: widget.onBack),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('${n.nombre} · ${fecha(n.inicio)} a ${fecha(n.fin)}',
+                    style: Theme.of(context).textTheme.titleMedium),
+                Text('Aportes patronales (IVSS, RPE, FAOV, LOPCYMAT): ${money.format(n.totalAportes)}',
+                    style: Theme.of(context).textTheme.bodySmall),
+              ]),
+            ),
+            Chip(label: Text(estado)),
+          ]),
+          const SizedBox(height: 8),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            OutlinedButton.icon(
+                onPressed: _pdfNomina,
+                icon: const Icon(Icons.picture_as_pdf),
+                label: const Text('PDF nómina')),
+            if (widget.puedeEditar && estado == 'borrador') ...[
+              FilledButton(onPressed: () => _estado('aprobada'), child: const Text('Aprobar')),
+              OutlinedButton(
+                  onPressed: () async {
+                    await Repo.borrarNomina(n.id);
+                    widget.onBack();
+                  },
+                  child: const Text('Eliminar')),
+            ],
+            if (widget.puedeEditar && estado == 'aprobada')
+              FilledButton(onPressed: () => _estado('pagada'), child: const Text('Marcar pagada')),
+          ]),
         ]),
       ),
       const Divider(height: 1),
@@ -295,9 +360,13 @@ class _NominaDetalleState extends State<_NominaDetalle> {
               for (final r in s.data!)
                 ListTile(
                   title: Text(r.nombreEmpleado),
-                  subtitle: Text('Ingresos ${money.format(r.ingresos)} · Egresos ${money.format(r.egresos)}'),
-                  trailing: Text('Neto ${money.format(r.neto)} (US\$ ${usd.format(r.netoUsd)})',
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  isThreeLine: true,
+                  subtitle: Text('Ingresos ${money.format(r.ingresos)} · Egresos ${money.format(r.egresos)}\n'
+                      'Neto ${money.format(r.neto)} Bs · US\$ ${usd.format(r.netoUsd)}'),
+                  trailing: IconButton(
+                      tooltip: 'PDF del recibo',
+                      icon: const Icon(Icons.picture_as_pdf),
+                      onPressed: () => _pdfReciboPorId(r)),
                   onTap: () => _ver(r),
                 ),
             ]);

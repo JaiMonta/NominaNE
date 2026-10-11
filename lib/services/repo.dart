@@ -42,6 +42,23 @@ class Repo {
         'fuente': fuente,
       }, onConflict: 'fecha,moneda');
 
+  // ---------- Ajustes (valores de texto) ----------
+  static Future<List<Map<String, dynamic>>> ajustes() async =>
+      List<Map<String, dynamic>>.from(
+          await db.from('ajustes').select().order('clave'));
+
+  static Future<String> ajuste(String clave) async {
+    final r = await db
+        .from('ajustes')
+        .select('valor')
+        .eq('clave', clave)
+        .maybeSingle();
+    return (r?['valor'] as String?) ?? '';
+  }
+
+  static Future<void> guardarAjuste(String clave, String valor) =>
+      db.from('ajustes').update({'valor': valor}).eq('clave', clave);
+
   // ---------- Parámetros ----------
   static Future<List<Map<String, dynamic>>> parametros() async =>
       List<Map<String, dynamic>>.from(
