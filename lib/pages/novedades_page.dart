@@ -39,33 +39,36 @@ class _NovedadesPageState extends State<NovedadesPage> {
           future: _f,
           builder: (_, s) {
             if (s.hasError) return Center(child: Text('Error: ${s.error}'));
-            if (!s.hasData) return const Center(child: CircularProgressIndicator());
+            if (!s.hasData)
+              return const Center(child: CircularProgressIndicator());
             if (s.data!.isEmpty) {
               return const Center(
-                  child: Text('Sin novedades (horas extra, bonos, préstamos, vacaciones...)'));
+                  child: Text(
+                      'Sin novedades (horas extra, bonos, préstamos, vacaciones...)'));
             }
             return ListView(
-              padding: const EdgeInsets.only(bottom: 88),
-              children: [
-              for (final n in s.data!)
-                ListTile(
-                  title: Text(
-                      '${n['empleados']?['nombres']} ${n['empleados']?['apellidos']} — '
-                      '${n['conceptos']?['nombre']}'),
-                  subtitle: Text('Cant: ${n['cantidad']} · Monto US\$: ${n['monto_usd']} · '
-                      '${n['periodo_inicio'] ?? 'recurrente'}'
-                      '${n['periodo_fin'] != null ? ' a ${n['periodo_fin']}' : ''}'
-                      '${n['nota'] != null ? ' · ${n['nota']}' : ''}'),
-                  trailing: widget.puedeEditar
-                      ? IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () async {
-                            await Repo.borrarNovedad(n['id']);
-                            _reload();
-                          })
-                      : null,
-                ),
-            ]);
+                padding: const EdgeInsets.only(bottom: 88),
+                children: [
+                  for (final n in s.data!)
+                    ListTile(
+                      title: Text(
+                          '${n['empleados']?['nombres']} ${n['empleados']?['apellidos']} — '
+                          '${n['conceptos']?['nombre']}'),
+                      subtitle: Text(
+                          'Cant: ${n['cantidad']} · Monto US\$: ${n['monto_usd']} · '
+                          '${n['periodo_inicio'] ?? 'recurrente'}'
+                          '${n['periodo_fin'] != null ? ' a ${n['periodo_fin']}' : ''}'
+                          '${n['nota'] != null ? ' · ${n['nota']}' : ''}'),
+                      trailing: widget.puedeEditar
+                          ? IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed: () async {
+                                await Repo.borrarNovedad(n['id']);
+                                _reload();
+                              })
+                          : null,
+                    ),
+                ]);
           },
         ),
       );
@@ -86,6 +89,28 @@ class _NovedadDialogState extends State<_NovedadDialog> {
   bool recurrente = false;
   String? _err;
 
+  Concepto? get _conceptoSel {
+    for (final c in widget.cons) {
+      if (c.id == con) return c;
+    }
+    return null;
+  }
+
+  Widget get _notaConcepto {
+    final c = _conceptoSel;
+    if (c == null || c.tipo != 'ingreso' || c.esSalarial) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        'Concepto no salarial: se pagará como ingreso extra y no afectará '
+        'la base de aportes ni prestaciones.',
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+    );
+  }
+
   Future<DateTime?> _pick() => showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -93,8 +118,24 @@ class _NovedadDialogState extends State<_NovedadDialog> {
       lastDate: DateTime(2100));
 
   Future<void> _guardar() async {
-    if (emp == null || con == null || (!recurrente && (ini == null || fin == null))) {
+    if (emp == null ||
+        con == null ||
+        (!recurrente && (ini == null || fin == null))) {
       setState(() => _err = 'Complete empleado, concepto y período');
+      return;
+    }
+    if (!recurrente && fin!.isBefore(ini!)) {
+      setState(
+          () => _err = 'La fecha final no puede ser anterior a la inicial');
+      return;
+    }
+    final c = _conceptoSel;
+    const porHoras = {'HE_DIURNA', 'HE_NOCT', 'REC_NOCT', 'FERIADO'};
+    if (c != null &&
+        porHoras.contains(c.codigo.trim().toUpperCase()) &&
+        cantidad <= 0 &&
+        monto <= 0) {
+      setState(() => _err = 'Indique la cantidad de horas o un monto');
       return;
     }
     try {
@@ -132,18 +173,23 @@ class _NovedadDialogState extends State<_NovedadDialog> {
                 decoration: const InputDecoration(labelText: 'Concepto'),
                 items: [
                   for (final c in widget.cons)
-                    DropdownMenuItem(value: c.id, child: Text('${c.codigo} · ${c.nombre}'))
+                    DropdownMenuItem(
+                        value: c.id, child: Text('${c.codigo} · ${c.nombre}'))
                 ],
-                onChanged: (v) => con = v,
+                onChanged: (v) => setState(() => con = v),
               ),
+              _notaConcepto,
               TextFormField(
                   initialValue: '1',
-                  decoration: const InputDecoration(labelText: 'Cantidad (horas, días, unidades)'),
-                  onChanged: (v) => cantidad = double.tryParse(v.replaceAll(',', '.')) ?? 0),
+                  decoration: const InputDecoration(
+                      labelText: 'Cantidad (horas, días, unidades)'),
+                  onChanged: (v) =>
+                      cantidad = double.tryParse(v.replaceAll(',', '.')) ?? 0),
               TextFormField(
                   decoration: const InputDecoration(
                       labelText: 'Monto USD (0 = que lo calcule el sistema)'),
-                  onChanged: (v) => monto = double.tryParse(v.replaceAll(',', '.')) ?? 0),
+                  onChanged: (v) =>
+                      monto = double.tryParse(v.replaceAll(',', '.')) ?? 0),
               SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Recurrente (todas las nóminas)'),
@@ -169,12 +215,16 @@ class _NovedadDialogState extends State<_NovedadDialog> {
                   decoration: const InputDecoration(labelText: 'Nota'),
                   onChanged: (v) => nota = v),
               if (_err != null)
-                Text(_err!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                Text(_err!,
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.error)),
             ]),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar')),
           FilledButton(onPressed: _guardar, child: const Text('Guardar')),
         ],
       );

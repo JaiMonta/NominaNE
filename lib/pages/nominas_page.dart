@@ -19,7 +19,8 @@ class _NominasPageState extends State<NominasPage> {
   void _reload() => setState(() => _f = Repo.nominas());
 
   Future<void> _nueva() async {
-    final ok = await showDialog<bool>(context: context, builder: (_) => const _NuevaNomina());
+    final ok = await showDialog<bool>(
+        context: context, builder: (_) => const _NuevaNomina());
     if (ok == true) _reload();
   }
 
@@ -45,23 +46,25 @@ class _NominasPageState extends State<NominasPage> {
         future: _f,
         builder: (_, s) {
           if (s.hasError) return Center(child: Text('Error: ${s.error}'));
-          if (!s.hasData) return const Center(child: CircularProgressIndicator());
-          if (s.data!.isEmpty) return const Center(child: Text('Aún no hay nóminas'));
+          if (!s.hasData)
+            return const Center(child: CircularProgressIndicator());
+          if (s.data!.isEmpty)
+            return const Center(child: Text('Aún no hay nóminas'));
           return ListView(
-            padding: const EdgeInsets.only(bottom: 88),
-            children: [
-            for (final n in s.data!)
-              ListTile(
-                title: Text('${n.nombre} (${n.frecuencia})'),
-                subtitle: Text('${fecha(n.inicio)} a ${fecha(n.fin)} · '
-                    'Ingresos ${money.format(n.totalIngresos)} · '
-                    'Egresos ${money.format(n.totalEgresos)} · '
-                    'Neto ${money.format(n.totalNeto)}'
-                    '${n.tasaBcv != null ? ' (US\$ ${usd.format(n.totalNeto / n.tasaBcv!)})' : ''}'),
-                trailing: Chip(label: Text(n.estado)),
-                onTap: () => setState(() => _sel = n),
-              ),
-          ]);
+              padding: const EdgeInsets.only(bottom: 88),
+              children: [
+                for (final n in s.data!)
+                  ListTile(
+                    title: Text('${n.nombre} (${n.frecuencia})'),
+                    subtitle: Text('${fecha(n.inicio)} a ${fecha(n.fin)} · '
+                        'Ingresos ${money.format(n.totalIngresos)} · '
+                        'Egresos ${money.format(n.totalEgresos)} · '
+                        'Neto ${money.format(n.totalNeto)}'
+                        '${n.tasaBcv != null ? ' (US\$ ${usd.format(n.totalNeto / n.tasaBcv!)})' : ''}'),
+                    trailing: Chip(label: Text(n.estado)),
+                    onTap: () => setState(() => _sel = n),
+                  ),
+              ]);
         },
       ),
     );
@@ -95,7 +98,10 @@ class _NuevaNominaState extends State<_NuevaNomina> {
       lastDate: DateTime(2100));
 
   Future<void> _generar() async {
-    if (nombre.trim().isEmpty || ini == null || fin == null || fin!.isBefore(ini!)) {
+    if (nombre.trim().isEmpty ||
+        ini == null ||
+        fin == null ||
+        fin!.isBefore(ini!)) {
       setState(() => _err = 'Complete nombre y un período válido');
       return;
     }
@@ -139,11 +145,13 @@ class _NuevaNominaState extends State<_NuevaNomina> {
           width: anchoDialogo(context, 420),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(
-                decoration: const InputDecoration(labelText: 'Nombre (ej. 1ra quincena octubre)'),
+                decoration: const InputDecoration(
+                    labelText: 'Nombre (ej. 1ra quincena octubre)'),
                 onChanged: (v) => nombre = v),
             DropdownButtonFormField<String>(
               value: frecuencia,
-              decoration: const InputDecoration(labelText: 'Frecuencia (Art. 150 LOT)'),
+              decoration:
+                  const InputDecoration(labelText: 'Frecuencia (Art. 150 LOT)'),
               items: const [
                 DropdownMenuItem(value: 'semanal', child: Text('semanal')),
                 DropdownMenuItem(value: 'quincenal', child: Text('quincenal')),
@@ -170,8 +178,10 @@ class _NuevaNominaState extends State<_NuevaNomina> {
                 }),
             TextField(
                 decoration: const InputDecoration(
-                    labelText: 'Días de utilidades a pagar en esta nómina (0 = ninguno)'),
-                onChanged: (v) => utilidades = double.tryParse(v.replaceAll(',', '.')) ?? 0),
+                    labelText:
+                        'Días de utilidades a pagar en esta nómina (0 = ninguno)'),
+                onChanged: (v) =>
+                    utilidades = double.tryParse(v.replaceAll(',', '.')) ?? 0),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.currency_exchange),
@@ -183,13 +193,21 @@ class _NuevaNominaState extends State<_NuevaNomina> {
                   : null,
             ),
             if (_err != null)
-              Text(_err!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            if (_busy) const Padding(padding: EdgeInsets.only(top: 12), child: LinearProgressIndicator()),
+              Text(_err!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            if (_busy)
+              const Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: LinearProgressIndicator()),
           ]),
         ),
         actions: [
-          TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancelar')),
-          FilledButton(onPressed: _busy ? null : _generar, child: const Text('Calcular')),
+          TextButton(
+              onPressed: _busy ? null : () => Navigator.pop(context),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: _busy ? null : _generar,
+              child: const Text('Calcular')),
         ],
       );
 }
@@ -218,7 +236,11 @@ class _NominaDetalleState extends State<_NominaDetalle> {
       final empresa = await Repo.ajuste('empresa_nombre');
       final rif = await Repo.ajuste('empresa_rif');
       await emitirReciboPdf(
-          nomina: widget.nomina, recibo: r, detalle: det, empresa: empresa, rif: rif);
+          nomina: widget.nomina,
+          recibo: r,
+          detalle: det,
+          empresa: empresa,
+          rif: rif);
     } catch (x) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -251,8 +273,22 @@ class _NominaDetalleState extends State<_NominaDetalle> {
     }
   }
 
+  bool _esIngresoExtra(Map<String, dynamic> d) =>
+      d['tipo'] == 'ingreso' && d['es_salarial'] == false;
+
+  double _suma(List<Map<String, dynamic>> ds, String key) =>
+      ds.fold<double>(0, (s, d) => s + ((d[key] ?? 0) as num).toDouble());
+
   Future<void> _ver(Recibo r) async {
     final det = await Repo.detalle(r.id);
+    final base = det.where((d) => !_esIngresoExtra(d)).toList();
+    final extras = det.where(_esIngresoExtra).toList();
+    final ingresoSalarialBs =
+        _suma(base.where((d) => d['tipo'] == 'ingreso').toList(), 'monto');
+    final ingresoSalarialUsd =
+        _suma(base.where((d) => d['tipo'] == 'ingreso').toList(), 'monto_usd');
+    final extraBs = _suma(extras, 'monto');
+    final extraUsd = _suma(extras, 'monto_usd');
     if (!mounted) return;
     showDialog(
       context: context,
@@ -267,43 +303,51 @@ class _NominaDetalleState extends State<_NominaDetalle> {
               children: [
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: Text('Tasa BCV: ${r.tasaBcv == null ? '—' : '${usd.format(r.tasaBcv!)} Bs/USD'}'),
+                  child: Text(
+                      'Tasa BCV: ${r.tasaBcv == null ? '—' : '${usd.format(r.tasaBcv!)} Bs/USD'}'),
                 ),
                 if (esMovil(context)) ...[
-                  for (final d in det) _conceptoCard(d),
+                  for (final d in base) _conceptoCard(d),
+                  _ingresoExtraCard(extras),
                   const SizedBox(height: 8),
-                  _totalesCard(r),
-                ] else
+                  _totalesCard(r, ingresoSalarialBs, ingresoSalarialUsd,
+                      extraBs, extraUsd),
+                ] else ...[
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: DataTable(columns: const [
-                    DataColumn(label: Text('Concepto')),
-                    DataColumn(label: Text('Cant.'), numeric: true),
-                    DataColumn(label: Text('Ingreso (Bs)'), numeric: true),
-                    DataColumn(label: Text('Egreso (Bs)'), numeric: true),
-                    DataColumn(label: Text('Ingreso (US\$)'), numeric: true),
-                    DataColumn(label: Text('Egreso (US\$)'), numeric: true),
-                  ], rows: [
-                    for (final d in det)
-                      DataRow(cells: [
-                        DataCell(Tooltip(
-                            message: d['base_legal'] ?? '', child: Text(d['concepto_nombre']))),
-                        DataCell(Text('${d['cantidad']}')),
-                        DataCell(Text(d['tipo'] == 'ingreso' ? money.format(d['monto']) : '')),
-                        DataCell(Text(d['tipo'] == 'egreso' ? money.format(d['monto']) : '')),
-                        DataCell(Text(d['tipo'] == 'ingreso' ? usd.format(d['monto_usd'] ?? 0) : '')),
-                        DataCell(Text(d['tipo'] == 'egreso' ? usd.format(d['monto_usd'] ?? 0) : '')),
-                      ]),
-                    DataRow(cells: [
-                      const DataCell(Text('NETO A PAGAR', style: TextStyle(fontWeight: FontWeight.bold))),
-                      const DataCell(Text('')),
-                      DataCell(Text(money.format(r.ingresos))),
-                      DataCell(Text('${money.format(r.egresos)}  =  ${money.format(r.neto)}')),
-                      DataCell(Text(usd.format(r.ingresosUsd))),
-                      DataCell(Text('${usd.format(r.egresosUsd)}  =  ${usd.format(r.netoUsd)}')),
+                      DataColumn(label: Text('Concepto')),
+                      DataColumn(label: Text('Cant.'), numeric: true),
+                      DataColumn(label: Text('Ingreso (Bs)'), numeric: true),
+                      DataColumn(label: Text('Egreso (Bs)'), numeric: true),
+                      DataColumn(label: Text('Ingreso (US\$)'), numeric: true),
+                      DataColumn(label: Text('Egreso (US\$)'), numeric: true),
+                    ], rows: [
+                      for (final d in base)
+                        DataRow(cells: [
+                          DataCell(Tooltip(
+                              message: d['base_legal'] ?? '',
+                              child: Text(d['concepto_nombre']))),
+                          DataCell(Text('${d['cantidad']}')),
+                          DataCell(Text(d['tipo'] == 'ingreso'
+                              ? money.format(d['monto'])
+                              : '')),
+                          DataCell(Text(d['tipo'] == 'egreso'
+                              ? money.format(d['monto'])
+                              : '')),
+                          DataCell(Text(d['tipo'] == 'ingreso'
+                              ? usd.format(d['monto_usd'] ?? 0)
+                              : '')),
+                          DataCell(Text(d['tipo'] == 'egreso'
+                              ? usd.format(d['monto_usd'] ?? 0)
+                              : '')),
+                        ]),
                     ]),
-                  ]),
-                ),
+                  ),
+                  _ingresoExtraCard(extras),
+                  _totalesCard(r, ingresoSalarialBs, ingresoSalarialUsd,
+                      extraBs, extraUsd),
+                ],
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: Column(
@@ -330,7 +374,9 @@ class _NominaDetalleState extends State<_NominaDetalle> {
             icon: const Icon(Icons.picture_as_pdf),
             label: const Text('PDF'),
           ),
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cerrar')),
         ],
       ),
     );
@@ -375,12 +421,54 @@ class _NominaDetalleState extends State<_NominaDetalle> {
     );
   }
 
-  Widget _totalesCard(Recibo r) => Card(
+  Widget _ingresoExtraCard(List<Map<String, dynamic>> extras) {
+    if (extras.isEmpty) return const SizedBox.shrink();
+    final totalBs = _suma(extras, 'monto');
+    final totalUsd = _suma(extras, 'monto_usd');
+    return Card(
+      margin: const EdgeInsets.only(top: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.add_card, size: 18),
+            const SizedBox(width: 6),
+            Text('Ingreso extra (no salarial)',
+                style: Theme.of(context).textTheme.titleSmall),
+          ]),
+          const SizedBox(height: 4),
+          for (final d in extras)
+            _filaResumen(
+                '${d['concepto_nombre']} (cant. ${d['cantidad']})',
+                '${money.format(d['monto'])} Bs',
+                'US\$ ${usd.format(d['monto_usd'] ?? 0)}'),
+          const Divider(),
+          _filaResumen('Subtotal ingreso extra', '${money.format(totalBs)} Bs',
+              'US\$ ${usd.format(totalUsd)}',
+              bold: true),
+        ]),
+      ),
+    );
+  }
+
+  Widget _totalesCard(Recibo r, double ingresoSalarialBs,
+          double ingresoSalarialUsd, double extraBs, double extraUsd) =>
+      Card(
         margin: const EdgeInsets.symmetric(vertical: 4),
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _filaResumen('Ingresos', '${money.format(r.ingresos)} Bs',
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            _filaResumen(
+                'Ingresos salariales',
+                '${money.format(ingresoSalarialBs)} Bs',
+                'US\$ ${usd.format(ingresoSalarialUsd)}'),
+            if (extraBs > 0)
+              _filaResumen(
+                  'Ingreso extra (no salarial)',
+                  '${money.format(extraBs)} Bs',
+                  'US\$ ${usd.format(extraUsd)}'),
+            _filaResumen('Total ingresos', '${money.format(r.ingresos)} Bs',
                 'US\$ ${usd.format(r.ingresosUsd)}'),
             _filaResumen('Egresos', '${money.format(r.egresos)} Bs',
                 'US\$ ${usd.format(r.egresosUsd)}'),
@@ -400,14 +488,18 @@ class _NominaDetalleState extends State<_NominaDetalle> {
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            IconButton(icon: const Icon(Icons.arrow_back), onPressed: widget.onBack),
+            IconButton(
+                icon: const Icon(Icons.arrow_back), onPressed: widget.onBack),
             Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('${n.nombre} · ${fecha(n.inicio)} a ${fecha(n.fin)}',
-                    style: Theme.of(context).textTheme.titleMedium),
-                Text('Aportes patronales — IVSS ${money.format(n.totalAporteIvss)} · RPE ${money.format(n.totalAporteRpe)} · FAOV ${money.format(n.totalAporteFaov)} · LOPCYMAT ${money.format(n.totalAporteLopcymat)}  (Total ${money.format(n.totalAportes)})',
-                    style: Theme.of(context).textTheme.bodySmall),
-              ]),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${n.nombre} · ${fecha(n.inicio)} a ${fecha(n.fin)}',
+                        style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                        'Aportes patronales — IVSS ${money.format(n.totalAporteIvss)} · RPE ${money.format(n.totalAporteRpe)} · FAOV ${money.format(n.totalAporteFaov)} · LOPCYMAT ${money.format(n.totalAporteLopcymat)}  (Total ${money.format(n.totalAportes)})',
+                        style: Theme.of(context).textTheme.bodySmall),
+                  ]),
             ),
             Chip(label: Text(estado)),
           ]),
@@ -418,7 +510,9 @@ class _NominaDetalleState extends State<_NominaDetalle> {
                 icon: const Icon(Icons.picture_as_pdf),
                 label: const Text('PDF nómina')),
             if (widget.puedeEditar && estado == 'borrador') ...[
-              FilledButton(onPressed: () => _estado('aprobada'), child: const Text('Aprobar')),
+              FilledButton(
+                  onPressed: () => _estado('aprobada'),
+                  child: const Text('Aprobar')),
               OutlinedButton(
                   onPressed: () async {
                     await Repo.borrarNomina(n.id);
@@ -427,7 +521,9 @@ class _NominaDetalleState extends State<_NominaDetalle> {
                   child: const Text('Eliminar')),
             ],
             if (widget.puedeEditar && estado == 'aprobada')
-              FilledButton(onPressed: () => _estado('pagada'), child: const Text('Marcar pagada')),
+              FilledButton(
+                  onPressed: () => _estado('pagada'),
+                  child: const Text('Marcar pagada')),
           ]),
         ]),
       ),
@@ -437,13 +533,15 @@ class _NominaDetalleState extends State<_NominaDetalle> {
           future: _f,
           builder: (_, s) {
             if (s.hasError) return Center(child: Text('Error: ${s.error}'));
-            if (!s.hasData) return const Center(child: CircularProgressIndicator());
+            if (!s.hasData)
+              return const Center(child: CircularProgressIndicator());
             return ListView(children: [
               for (final r in s.data!)
                 ListTile(
                   title: Text(r.nombreEmpleado),
                   isThreeLine: true,
-                  subtitle: Text('Ingresos ${money.format(r.ingresos)} · Egresos ${money.format(r.egresos)}\n'
+                  subtitle: Text(
+                      'Ingresos ${money.format(r.ingresos)} · Egresos ${money.format(r.egresos)}\n'
                       'Neto ${money.format(r.neto)} Bs · US\$ ${usd.format(r.netoUsd)}'),
                   trailing: IconButton(
                       tooltip: 'PDF del recibo',

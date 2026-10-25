@@ -18,6 +18,10 @@ recibos de pago en USD y Bolívares (VES) a la tasa del BCV, y aportes patronale
    - `supabase/migrations/001_schema.sql`
    - `supabase/migrations/002_usd_tasas.sql`
    - `supabase/migrations/003_ajustes.sql`
+   - `supabase/migrations/004_aportes_patronales.sql`
+   - `supabase/migrations/005_recibo_detalle_es_salarial.sql`
+   - `supabase/migrations/006_ivss_sin_tope.sql`
+   - `supabase/migrations/007_empleados_fecha_nacimiento_telefono.sql`
 3. En *Authentication → URL Configuration* agrega tu dominio (ej.
    `https://nomina-ne.web.app`) en **Site URL** y **Additional Redirect URLs**.
    Para pruebas, en *Authentication → Providers → Email* puedes desactivar la
@@ -36,6 +40,17 @@ recibos de pago en USD y Bolívares (VES) a la tasa del BCV, y aportes patronale
 6. Revisa recibos (Bs y US$), **Aprobar** y **Marcar pagada**.
 7. **PDF**: botón por recibo y **PDF nómina** (multipágina). Descarga directa.
 
+Los conceptos marcados como **no salariales** (por ejemplo bonificaciones o
+alimentación) se pagan y suman al neto, pero no entran en la base de IVSS, RPE,
+FAOV ni prestaciones. En el recibo aparecen al final en la sección
+**Ingreso extra (no salarial)**.
+
+En este despliegue el IVSS se calcula sobre toda la base salarial
+(`ivss_tope_salarios_min = 0`, sin el tope de 5 salarios mínimos) y el aporte
+patronal está en 11% (riesgo máximo). Para volver al tope legal, cambia
+`ivss_tope_salarios_min` a 5. Desactivar el tope no corresponde al cálculo
+legal de 5 salarios mínimos.
+
 ## Despliegue (Firebase Hosting)
 ```
 flutter build web --release
@@ -44,7 +59,7 @@ firebase deploy --only hosting
 `firebase.json` sirve `build/web` con rewrite SPA.
 
 ## Validación rápida
-- [ ] Migraciones 001, 002 y 003 aplicadas.
+- [ ] Migraciones 001 a 007 aplicadas.
 - [ ] Dominio de Firebase agregado en Supabase Auth.
 - [ ] Tasa BCV del día cargada en *Tasas*.
 - [ ] Nombre/RIF de la empresa en *Parámetros*.

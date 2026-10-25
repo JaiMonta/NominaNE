@@ -3,9 +3,9 @@ double _d(dynamic v) => v == null ? 0 : (v as num).toDouble();
 class Empleado {
   final String? id;
   String cedula, nombres, apellidos, tipo, jornada, frecuenciaPago;
-  String? cargo, departamento, banco, cuenta, email;
+  String? cargo, departamento, banco, cuenta, email, telefono;
   DateTime fechaIngreso;
-  DateTime? fechaEgreso;
+  DateTime? fechaEgreso, fechaNacimiento;
   double salarioMensualUsd;
   bool activo;
 
@@ -19,12 +19,14 @@ class Empleado {
     this.tipo = 'empleado',
     DateTime? fechaIngreso,
     this.fechaEgreso,
+    this.fechaNacimiento,
     this.salarioMensualUsd = 0,
     this.jornada = 'diurna',
     this.frecuenciaPago = 'quincenal',
     this.banco,
     this.cuenta,
     this.email,
+    this.telefono,
     this.activo = true,
   }) : fechaIngreso = fechaIngreso ?? DateTime.now();
 
@@ -41,12 +43,16 @@ class Empleado {
         fechaIngreso: DateTime.parse(j['fecha_ingreso']),
         fechaEgreso:
             j['fecha_egreso'] == null ? null : DateTime.parse(j['fecha_egreso']),
+        fechaNacimiento: j['fecha_nacimiento'] == null
+            ? null
+            : DateTime.parse(j['fecha_nacimiento']),
         salarioMensualUsd: _d(j['salario_mensual_usd']),
         jornada: j['jornada'] ?? 'diurna',
         frecuenciaPago: j['frecuencia_pago'] ?? 'quincenal',
         banco: j['banco'],
         cuenta: j['cuenta'],
         email: j['email'],
+        telefono: j['telefono'],
         activo: j['activo'] ?? true,
       );
 
@@ -59,12 +65,15 @@ class Empleado {
         'tipo': tipo,
         'fecha_ingreso': fechaIngreso.toIso8601String().substring(0, 10),
         'fecha_egreso': fechaEgreso?.toIso8601String().substring(0, 10),
+        'fecha_nacimiento':
+            fechaNacimiento?.toIso8601String().substring(0, 10),
         'salario_mensual_usd': salarioMensualUsd,
         'jornada': jornada,
         'frecuencia_pago': frecuenciaPago,
         'banco': banco,
         'cuenta': cuenta,
         'email': email,
+        'telefono': telefono,
         'activo': activo,
       };
 }

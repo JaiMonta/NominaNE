@@ -95,6 +95,8 @@ class _ParametrosPageState extends State<ParametrosPage> {
               child: Text(
                   'Aviso: la LOT adjunta (1997) fue reemplazada por la LOTTT (2012). '
                   'Los porcentajes de IVSS, RPE y FAOV no provienen de los documentos adjuntos. '
+                  'Si ivss_tope_salarios_min = 0, el IVSS se calcula sobre toda la base salarial '
+                  '(sin el tope de 5 salarios mínimos). '
                   'Valide cada parámetro con la normativa vigente antes de pagar.',
                   style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ),

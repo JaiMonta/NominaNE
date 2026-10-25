@@ -11,7 +11,8 @@ class Repo {
   static Future<String> rol() async {
     final u = db.auth.currentUser;
     if (u == null) return 'consulta';
-    final r = await db.from('perfiles').select('rol').eq('id', u.id).maybeSingle();
+    final r =
+        await db.from('perfiles').select('rol').eq('id', u.id).maybeSingle();
     return (r?['rol'] as String?) ?? 'consulta';
   }
 
@@ -30,8 +31,10 @@ class Repo {
   }
 
   static Future<List<Map<String, dynamic>>> tasas() async =>
-      List<Map<String, dynamic>>.from(
-          await db.from('tasas_cambio').select().order('fecha', ascending: false));
+      List<Map<String, dynamic>>.from(await db
+          .from('tasas_cambio')
+          .select()
+          .order('fecha', ascending: false));
 
   static Future<void> guardarTasa(DateTime dia, double tasa,
           {String fuente = 'BCV'}) =>
@@ -104,7 +107,8 @@ class Repo {
   static Future<List<Map<String, dynamic>>> novedades() async =>
       List<Map<String, dynamic>>.from(await db
           .from('novedades')
-          .select('*, empleados(nombres,apellidos), conceptos(codigo,nombre,tipo)')
+          .select(
+              '*, empleados(nombres,apellidos), conceptos(codigo,nombre,tipo)')
           .order('created_at', ascending: false));
 
   static Future<void> agregarNovedad(Map<String, dynamic> n) =>
@@ -119,13 +123,12 @@ class Repo {
           .map<Nomina>((j) => Nomina.fromJson(j))
           .toList();
 
-  static Future<List<Recibo>> recibos(String nominaId) async =>
-      (await db
-              .from('recibos')
-              .select('*, empleados(nombres,apellidos,cedula)')
-              .eq('nomina_id', nominaId))
-          .map<Recibo>((j) => Recibo.fromJson(j))
-          .toList();
+  static Future<List<Recibo>> recibos(String nominaId) async => (await db
+          .from('recibos')
+          .select('*, empleados(nombres,apellidos,cedula)')
+          .eq('nomina_id', nominaId))
+      .map<Recibo>((j) => Recibo.fromJson(j))
+      .toList();
 
   static Future<List<Map<String, dynamic>>> detalle(String reciboId) async =>
       List<Map<String, dynamic>>.from(await db
@@ -169,53 +172,64 @@ class Repo {
         .toList();
     if (emps.isEmpty) return 0;
 
-    final nov = List<Map<String, dynamic>>.from(await db
-        .from('novedades')
-        .select()
-        .or('periodo_inicio.is.null,and(periodo_inicio.gte.${fecha(inicio)},periodo_inicio.lte.${fecha(fin)})'));
+    // Se incluyen las novedades que se superponen con el período, no solo
+    // las que comienzan dentro de él. También las recurrentes (inicio null).
+    final novTodas =
+        List<Map<String, dynamic>>.from(await db.from('novedades').select());
+    final nov = novTodas.where((n) {
+      final desdeTxt = n['periodo_inicio'] as String?;
+      if (desdeTxt == null) return true;
+      final desde = DateTime.tryParse(desdeTxt);
+      if (desde == null) return false;
+      final hastaTxt = n['periodo_fin'] as String?;
+      final hasta = hastaTxt == null ? null : DateTime.tryParse(hastaTxt);
+      return !desde.isAfter(fin) && (hasta == null || !hasta.isBefore(inicio));
+    }).toList();
 
     // Los conceptos con cálculo fijo tienen su valor en USD -> a VES.
-    final entConceptos = conceptos
-        .map((c) {
-          final calculo = (c['calculo'] ?? 'manual') as String;
-          final valorUsd = _num(c['valor']);
-          return EntradaConcepto(
-            codigo: c['codigo'],
-            nombre: c['nombre'],
-            tipo: c['tipo'],
-            baseLegal: c['base_legal'],
-            esSalarial: c['es_salarial'] ?? true,
-            calculo: calculo,
-            valor: calculo == 'fijo' ? bs(valorUsd) : valorUsd,
-          );
-        })
-        .toList();
+    final entConceptos = conceptos.map((c) {
+      final calculo = (c['calculo'] ?? 'manual') as String;
+      final valorUsd = _num(c['valor']);
+      return EntradaConcepto(
+        codigo: (c['codigo'] as String).trim().toUpperCase(),
+        nombre: c['nombre'],
+        tipo: c['tipo'],
+        baseLegal: c['base_legal'],
+        esSalarial: c['es_salarial'] ?? true,
+        calculo: calculo,
+        valor: calculo == 'fijo' ? bs(valorUsd) : valorUsd,
+      );
+    }).toList();
 
-    final nom = await db.from('nominas').insert({
-      'nombre': nombre,
-      'frecuencia': frecuencia,
-      'periodo_inicio': fecha(inicio),
-      'periodo_fin': fecha(fin),
-      'tasa_bcv': tasaBcv,
-      'tasa_fecha': fecha(fin),
-      'creada_por': db.auth.currentUser?.id,
-    }).select().single();
+    final nom = await db
+        .from('nominas')
+        .insert({
+          'nombre': nombre,
+          'frecuencia': frecuencia,
+          'periodo_inicio': fecha(inicio),
+          'periodo_fin': fecha(fin),
+          'tasa_bcv': tasaBcv,
+          'tasa_fecha': fecha(fin),
+          'creada_por': db.auth.currentUser?.id,
+        })
+        .select()
+        .single();
 
     double tI = 0, tE = 0, tN = 0, tA = 0;
     double tIvss = 0, tRpe = 0, tFaov = 0, tLop = 0;
     for (final e in emps) {
       // Montos de novedades en USD -> VES (0 = lo calcula el motor).
-      final novs = nov
-          .where((n) => n['empleado_id'] == e.id)
-          .map((n) {
-            final montoUsd = _num(n['monto_usd']);
-            return EntradaNovedad(
-              (porId[n['concepto_id']]?['codigo'] ?? '') as String,
-              _num(n['cantidad']),
-              montoUsd == 0 ? 0 : bs(montoUsd),
-            );
-          })
-          .toList();
+      final novs = nov.where((n) => n['empleado_id'] == e.id).map((n) {
+        final montoUsd = _num(n['monto_usd']);
+        final codigo = ((porId[n['concepto_id']]?['codigo'] ?? '') as String)
+            .trim()
+            .toUpperCase();
+        return EntradaNovedad(
+          codigo,
+          _num(n['cantidad']),
+          montoUsd == 0 ? 0 : bs(montoUsd),
+        );
+      }).toList();
       final r = motor.calcular(
         salarioMensual: bs(e.salarioMensualUsd),
         frecuencia: frecuencia,
@@ -225,25 +239,29 @@ class Repo {
         novedades: novs,
         aplicarUtilidadesDias: utilidadesDias,
       );
-      final rec = await db.from('recibos').insert({
-        'nomina_id': nom['id'],
-        'empleado_id': e.id,
-        'salario_mensual': r2(bs(e.salarioMensualUsd)),
-        'salario_mensual_usd': r2(e.salarioMensualUsd),
-        'tasa_bcv': tasaBcv,
-        'salario_diario': r.salarioDiario,
-        'total_ingresos': r.totalIngresos,
-        'total_egresos': r.totalEgresos,
-        'neto': r.neto,
-        'total_ingresos_usd': r2(r.totalIngresos / tasaBcv),
-        'total_egresos_usd': r2(r.totalEgresos / tasaBcv),
-        'neto_usd': r2(r.neto / tasaBcv),
-        'aportes_patronales': r.aportesPatronales,
-        'aporte_ivss_patronal': r.aporteIvss,
-        'aporte_rpe_patronal': r.aporteRpe,
-        'aporte_faov_patronal': r.aporteFaov,
-        'aporte_lopcymat_patronal': r.aporteLopcymat,
-      }).select().single();
+      final rec = await db
+          .from('recibos')
+          .insert({
+            'nomina_id': nom['id'],
+            'empleado_id': e.id,
+            'salario_mensual': r2(bs(e.salarioMensualUsd)),
+            'salario_mensual_usd': r2(e.salarioMensualUsd),
+            'tasa_bcv': tasaBcv,
+            'salario_diario': r.salarioDiario,
+            'total_ingresos': r.totalIngresos,
+            'total_egresos': r.totalEgresos,
+            'neto': r.neto,
+            'total_ingresos_usd': r2(r.totalIngresos / tasaBcv),
+            'total_egresos_usd': r2(r.totalEgresos / tasaBcv),
+            'neto_usd': r2(r.neto / tasaBcv),
+            'aportes_patronales': r.aportesPatronales,
+            'aporte_ivss_patronal': r.aporteIvss,
+            'aporte_rpe_patronal': r.aporteRpe,
+            'aporte_faov_patronal': r.aporteFaov,
+            'aporte_lopcymat_patronal': r.aporteLopcymat,
+          })
+          .select()
+          .single();
       await db.from('recibo_detalle').insert([
         for (final l in r.lineas)
           {
@@ -255,6 +273,7 @@ class Repo {
             'monto': l.monto,
             'monto_usd': r2(l.monto / tasaBcv),
             'base_legal': l.baseLegal,
+            'es_salarial': l.esSalarial,
           }
       ]);
       tI += r.totalIngresos;
@@ -279,7 +298,7 @@ class Repo {
     return emps.length;
   }
 
+  /// Incluye conceptos inactivos para no perder novedades históricas.
   static Future<List<Map<String, dynamic>>> conceptos_() async =>
-      List<Map<String, dynamic>>.from(
-          await db.from('conceptos').select().eq('activo', true));
+      List<Map<String, dynamic>>.from(await db.from('conceptos').select());
 }

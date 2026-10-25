@@ -57,6 +57,15 @@ class ResultadoRecibo {
       this.aporteRpe = 0,
       this.aporteFaov = 0,
       this.aporteLopcymat = 0});
+
+  double get totalIngresoSalarial => r2(lineas
+      .where((l) => l.tipo == 'ingreso' && l.esSalarial)
+      .fold<double>(0, (s, l) => s + l.monto));
+
+  /// Ingresos no salariales: suman al neto pero no a la base de aportes.
+  double get totalIngresoExtra => r2(lineas
+      .where((l) => l.tipo == 'ingreso' && !l.esSalarial)
+      .fold<double>(0, (s, l) => s + l.monto));
 }
 
 double r2(double v) => (v * 100).roundToDouble() / 100;
@@ -129,13 +138,15 @@ class PayrollEngine {
     final lineas = <LineaRecibo>[];
     final sd = salarioDiario(salarioMensual);
     final sh = salarioHora(salarioMensual);
-    final mapa = {for (final c in conceptos) c.codigo: c};
+    final mapa = <String, EntradaConcepto>{
+      for (final c in conceptos) c.codigo.trim().toUpperCase(): c
+    };
 
     void ing(String cod, double cant, double monto) {
-      final c = mapa[cod];
+      final c = mapa[cod.trim().toUpperCase()];
       if (c == null || monto == 0) return;
       lineas.add(LineaRecibo(
-          codigo: cod,
+          codigo: cod.trim().toUpperCase(),
           nombre: c.nombre,
           tipo: 'ingreso',
           cantidad: cant,
@@ -145,10 +156,10 @@ class PayrollEngine {
     }
 
     void egr(String cod, double cant, double monto) {
-      final c = mapa[cod];
+      final c = mapa[cod.trim().toUpperCase()];
       if (c == null || monto == 0) return;
       lineas.add(LineaRecibo(
-          codigo: cod,
+          codigo: cod.trim().toUpperCase(),
           nombre: c.nombre,
           tipo: 'egreso',
           cantidad: cant,
@@ -163,24 +174,34 @@ class PayrollEngine {
 
     // 2. Novedades (horas extra, recargos, feriados, bonos, préstamos...)
     for (final n in novedades) {
-      final c = mapa[n.conceptoCodigo];
+      final codigo = n.conceptoCodigo.trim().toUpperCase();
+      final c = mapa[codigo];
       if (c == null) continue;
       double monto = n.monto;
-      switch (n.conceptoCodigo) {
+      switch (codigo) {
         case 'HE_DIURNA':
-          monto = n.cantidad * sh * (1 + _g('recargo_hora_extra', .5));
+          if (n.cantidad > 0) {
+            monto = n.cantidad * sh * (1 + _g('recargo_hora_extra', .5));
+          }
           break;
         case 'HE_NOCT':
-          monto = n.cantidad *
-              sh *
-              (1 + _g('recargo_hora_extra', .5)) *
-              (1 + _g('recargo_nocturno', .3));
+          if (n.cantidad > 0) {
+            // Los recargos de hora extra (50%) y nocturno (30%) se suman
+            // sobre el salario hora: 1 + 0,50 + 0,30 = 1,80.
+            monto = n.cantidad *
+                sh *
+                (1 + _g('recargo_hora_extra', .5) + _g('recargo_nocturno', .3));
+          }
           break;
         case 'REC_NOCT':
-          monto = n.cantidad * sh * _g('recargo_nocturno', .3);
+          if (n.cantidad > 0) {
+            monto = n.cantidad * sh * _g('recargo_nocturno', .3);
+          }
           break;
         case 'FERIADO':
-          monto = n.cantidad * sd * (1 + _g('recargo_feriado', .5));
+          if (n.cantidad > 0) {
+            monto = n.cantidad * sd * (1 + _g('recargo_feriado', .5));
+          }
           break;
         case 'VACACIONES':
         case 'BONO_VAC':
@@ -213,19 +234,21 @@ class PayrollEngine {
     final baseSalarial = lineas
         .where((l) => l.tipo == 'ingreso' && l.esSalarial)
         .fold<double>(0, (s, l) => s + l.monto);
-    // IVSS: tope en salarios mínimos, prorrateado al período
+    // IVSS: tope en salarios mínimos (0 = sin tope), prorrateado al período
     final factorMes = dias / _g('dias_mes', 30);
     final topeIvss = _g('ivss_tope_salarios_min', 5) *
         _g('salario_minimo_mensual', 0) *
         factorMes;
-    final baseIvss = (topeIvss > 0 && baseSalarial > topeIvss) ? topeIvss : baseSalarial;
+    final baseIvss =
+        (topeIvss > 0 && baseSalarial > topeIvss) ? topeIvss : baseSalarial;
     egr('IVSS', 0, baseIvss * _g('ivss_empleado_pct', .04));
     egr('RPE', 0, baseSalarial * _g('rpe_empleado_pct', .005));
     egr('FAOV', 0, baseSalarial * _g('faov_empleado_pct', .01));
 
     // 5. Límite de cuotas de préstamo: máx 1/3 del ingreso (Art. 165)
-    final totalIng0 =
-        lineas.where((l) => l.tipo == 'ingreso').fold<double>(0, (s, l) => s + l.monto);
+    final totalIng0 = lineas
+        .where((l) => l.tipo == 'ingreso')
+        .fold<double>(0, (s, l) => s + l.monto);
     final idxPrest = lineas.indexWhere((l) => l.codigo == 'PRESTAMO');
     if (idxPrest >= 0 && lineas[idxPrest].monto > totalIng0 / 3) {
       final l = lineas[idxPrest];
@@ -240,15 +263,21 @@ class PayrollEngine {
     }
 
     // Totales
-    final totI = r2(lineas.where((l) => l.tipo == 'ingreso').fold<double>(0, (s, l) => s + l.monto));
-    final totE = r2(lineas.where((l) => l.tipo == 'egreso').fold<double>(0, (s, l) => s + l.monto));
+    final totI = r2(lineas
+        .where((l) => l.tipo == 'ingreso')
+        .fold<double>(0, (s, l) => s + l.monto));
+    final totE = r2(lineas
+        .where((l) => l.tipo == 'egreso')
+        .fold<double>(0, (s, l) => s + l.monto));
 
     // Aportes patronales (desglosados por concepto)
     final aIvss = r2(baseIvss * _g('ivss_patrono_pct', .09));
     final aRpe = r2(baseSalarial * _g('rpe_patrono_pct', .02));
     final aFaov = r2(baseSalarial * _g('faov_patrono_pct', .02));
     final aLop = r2(baseSalarial *
-        (riesgoLopcymat > 0 ? riesgoLopcymat : _g('lopcymat_patrono_pct', .0075)));
+        (riesgoLopcymat > 0
+            ? riesgoLopcymat
+            : _g('lopcymat_patrono_pct', .0075)));
     final aportes = r2(aIvss + aRpe + aFaov + aLop);
 
     return ResultadoRecibo(lineas, r2(sd), totI, totE, r2(totI - totE), aportes,

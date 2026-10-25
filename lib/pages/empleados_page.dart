@@ -8,6 +8,15 @@ import '../services/repo.dart';
 final money = NumberFormat('#,##0.00', 'es');
 final usd = NumberFormat('#,##0.00', 'en');
 
+String _extraEmpleado(Empleado e) {
+  final partes = <String>[
+    if (e.telefono != null && e.telefono!.isNotEmpty) 'Tel: ${e.telefono}',
+    if (e.fechaNacimiento != null)
+      'Nac: ${DateFormat('dd/MM/yyyy').format(e.fechaNacimiento!)}',
+  ];
+  return partes.isEmpty ? '' : '\n${partes.join(' · ')}';
+}
+
 class EmpleadosPage extends StatefulWidget {
   final bool puedeEditar;
   const EmpleadosPage({super.key, required this.puedeEditar});
@@ -49,7 +58,7 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                       child: ListTile(
                         title: Text(e.nombreCompleto),
                         subtitle: Text(
-                            '${e.cedula} · ${e.cargo ?? ''}\n${e.tipo} · ${e.frecuenciaPago}'),
+                            '${e.cedula} · ${e.cargo ?? ''}\n${e.tipo} · ${e.frecuenciaPago}${_extraEmpleado(e)}'),
                         isThreeLine: true,
                         trailing: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -77,6 +86,8 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                   columns: const [
                     DataColumn(label: Text('Cédula')),
                     DataColumn(label: Text('Nombre')),
+                    DataColumn(label: Text('Nacimiento')),
+                    DataColumn(label: Text('Teléfono')),
                     DataColumn(label: Text('Tipo')),
                     DataColumn(label: Text('Cargo')),
                     DataColumn(label: Text('Frecuencia')),
@@ -91,6 +102,11 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                         cells: [
                           DataCell(Text(e.cedula)),
                           DataCell(Text(e.nombreCompleto)),
+                          DataCell(Text(e.fechaNacimiento == null
+                              ? ''
+                              : DateFormat('dd/MM/yyyy')
+                                  .format(e.fechaNacimiento!))),
+                          DataCell(Text(e.telefono ?? '')),
                           DataCell(Text(e.tipo)),
                           DataCell(Text(e.cargo ?? '')),
                           DataCell(Text(e.frecuenciaPago)),
@@ -146,6 +162,15 @@ class _EmpleadoDialogState extends State<_EmpleadoDialog> {
     if (d != null) setState(() => e.fechaIngreso = d);
   }
 
+  Future<void> _fechaNacimiento() async {
+    final d = await showDatePicker(
+        context: context,
+        initialDate: e.fechaNacimiento ?? DateTime(1990, 1, 1),
+        firstDate: DateTime(1900),
+        lastDate: DateTime.now());
+    if (d != null) setState(() => e.fechaNacimiento = d);
+  }
+
   Future<void> _guardar() async {
     if (!_k.currentState!.validate()) return;
     try {
@@ -168,6 +193,15 @@ class _EmpleadoDialogState extends State<_EmpleadoDialog> {
                 _t('Cédula', e.cedula, (v) => e.cedula = v.trim(), req: true),
                 _t('Nombres', e.nombres, (v) => e.nombres = v, req: true),
                 _t('Apellidos', e.apellidos, (v) => e.apellidos = v, req: true),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                      'Nacimiento: ${e.fechaNacimiento == null ? '—' : DateFormat('dd/MM/yyyy').format(e.fechaNacimiento!)}'),
+                  trailing: const Icon(Icons.cake_outlined),
+                  onTap: _fechaNacimiento,
+                ),
+                _t('Teléfono', e.telefono, (v) => e.telefono = v.trim(),
+                    kt: TextInputType.phone),
                 _t('Cargo', e.cargo, (v) => e.cargo = v),
                 _t('Departamento', e.departamento, (v) => e.departamento = v),
                 _dd('Tipo (Art. 41/43 LOT)', e.tipo, ['empleado', 'obrero'],
