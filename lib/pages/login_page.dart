@@ -16,6 +16,9 @@ class _LoginPageState extends State<LoginPage> {
   String? _msg;
   String _empresa = 'FÁBRICA DE VELAS NUEVA ERA, C.A.';
 
+  String get _empresaDisplay =>
+      _empresa.replaceAll('NUEVA ERA', 'NUEVA\u00A0ERA');
+
   @override
   void initState() {
     super.initState();
@@ -77,7 +80,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
         const SizedBox(height: 16),
         Text(
-          _empresa,
+          _empresaDisplay,
           textAlign: TextAlign.center,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
