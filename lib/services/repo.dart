@@ -169,6 +169,7 @@ class Repo {
     required DateTime inicio,
     required DateTime fin,
     double utilidadesDias = 0,
+    String modalidad = 'normal',
   }) async {
     final tasaBcv = await tasa(fin);
     if (tasaBcv == null || tasaBcv <= 0) {
@@ -176,6 +177,8 @@ class Repo {
           'Regístrela en la pestaña "Tasas".');
     }
     final t = tasaBcv;
+    final esContratado = modalidad == 'contratado';
+    final frec = esContratado ? 'mensual' : frecuencia;
     double bs(double usd) => usd * t;
 
     final params = await parametrosMapa();
@@ -183,7 +186,8 @@ class Repo {
     final conceptos = await conceptos_();
     final porId = {for (final c in conceptos) c['id'] as String: c};
     final emps = (await empleados())
-        .where((e) => e.activo && e.frecuenciaPago == frecuencia)
+        .where((e) => e.activo && e.modalidad == modalidad)
+        .where((e) => esContratado || e.frecuenciaPago == frecuencia)
         .where((e) => !e.fechaIngreso.isAfter(fin))
         .where((e) => e.fechaEgreso == null || !e.fechaEgreso!.isBefore(inicio))
         .toList();
@@ -191,8 +195,9 @@ class Repo {
 
     // Se incluyen las novedades que se superponen con el período, no solo
     // las que comienzan dentro de él. También las recurrentes (inicio null).
-    final novTodas =
-        List<Map<String, dynamic>>.from(await db.from('novedades').select());
+    final novTodas = esContratado
+        ? <Map<String, dynamic>>[]
+        : List<Map<String, dynamic>>.from(await db.from('novedades').select());
     final nov = novTodas.where((n) {
       final desdeTxt = n['periodo_inicio'] as String?;
       if (desdeTxt == null) return true;
@@ -222,7 +227,8 @@ class Repo {
         .from('nominas')
         .insert({
           'nombre': nombre,
-          'frecuencia': frecuencia,
+          'frecuencia': frec,
+          'modalidad_nomina': modalidad,
           'periodo_inicio': fecha(inicio),
           'periodo_fin': fecha(fin),
           'tasa_bcv': tasaBcv,
@@ -236,26 +242,30 @@ class Repo {
     double tIvss = 0, tRpe = 0, tFaov = 0, tLop = 0;
     for (final e in emps) {
       // Montos de novedades en USD -> VES (0 = lo calcula el motor).
-      final novs = nov.where((n) => n['empleado_id'] == e.id).map((n) {
-        final montoUsd = _num(n['monto_usd']);
-        final codigo = ((porId[n['concepto_id']]?['codigo'] ?? '') as String)
-            .trim()
-            .toUpperCase();
-        return EntradaNovedad(
-          codigo,
-          _num(n['cantidad']),
-          montoUsd == 0 ? 0 : bs(montoUsd),
-        );
-      }).toList();
+      final novs = esContratado
+          ? <EntradaNovedad>[]
+          : nov.where((n) => n['empleado_id'] == e.id).map((n) {
+              final montoUsd = _num(n['monto_usd']);
+              final codigo =
+                  ((porId[n['concepto_id']]?['codigo'] ?? '') as String)
+                      .trim()
+                      .toUpperCase();
+              return EntradaNovedad(
+                codigo,
+                _num(n['cantidad']),
+                montoUsd == 0 ? 0 : bs(montoUsd),
+              );
+            }).toList();
       final r = motor.calcular(
         salarioMensual: bs(e.salarioMensualUsd),
-        frecuencia: frecuencia,
+        frecuencia: frec,
         ingreso: e.fechaIngreso,
         periodoInicio: inicio,
         periodoFin: fin,
         conceptos: entConceptos,
         novedades: novs,
-        aplicarUtilidadesDias: utilidadesDias,
+        aplicarUtilidadesDias: esContratado ? 0 : utilidadesDias,
+        soloSueldo: esContratado,
       );
       final rec = await db
           .from('recibos')

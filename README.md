@@ -25,6 +25,7 @@ recibos de pago en USD y Bolívares (VES) a la tasa del BCV, y aportes patronale
    - `supabase/migrations/008_departamentos.sql`
    - `supabase/migrations/009_ajustes_empresa_publica.sql`
    - `supabase/migrations/010_ivss_tope_semanal.sql`
+   - `supabase/migrations/011_modalidad_nomina.sql`
 3. En *Authentication → URL Configuration* agrega tu dominio (ej.
    `https://nomina-ne.web.app`) en **Site URL** y **Additional Redirect URLs**.
    Para pruebas, en *Authentication → Providers → Email* puedes desactivar la
@@ -42,6 +43,10 @@ recibos de pago en USD y Bolívares (VES) a la tasa del BCV, y aportes patronale
 5. **Nóminas → Generar nómina**: calcula en VES a la tasa del cierre (borrador).
 6. Revisa recibos (Bs y US$), **Aprobar** y **Marcar pagada**.
 7. **PDF**: botón por recibo y **PDF nómina** (multipágina). Descarga directa.
+
+En **Generar nómina** puedes elegir **Tipo de nómina: Contratados**. Los
+empleados con modalidad **Contratado** se excluyen de la nómina normal y se
+pagan en una nómina mensual solo con su sueldo, sin deducciones ni aportes.
 
 Los departamentos se administran en la pestaña **Departamentos**; la ficha del
 empleado toma el dato de ese catálogo.
@@ -65,7 +70,7 @@ firebase deploy --only hosting
 `firebase.json` sirve `build/web` con rewrite SPA.
 
 ## Validación rápida
-- [ ] Migraciones 001 a 010 aplicadas.
+- [ ] Migraciones 001 a 011 aplicadas.
 - [ ] Dominio de Firebase agregado en Supabase Auth.
 - [ ] Tasa BCV del día cargada en *Tasas*.
 - [ ] Nombre/RIF de la empresa en *Parámetros*.

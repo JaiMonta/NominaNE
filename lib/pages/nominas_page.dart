@@ -55,7 +55,8 @@ class _NominasPageState extends State<NominasPage> {
               children: [
                 for (final n in s.data!)
                   ListTile(
-                    title: Text('${n.nombre} (${n.frecuencia})'),
+                    title: Text('${n.nombre} '
+                        '(${n.modalidad == 'contratado' ? 'Contratados' : n.frecuencia})'),
                     subtitle: Text('${fecha(n.inicio)} a ${fecha(n.fin)} · '
                         'Ingresos ${money.format(n.totalIngresos)} · '
                         'Egresos ${money.format(n.totalEgresos)} · '
@@ -78,7 +79,7 @@ class _NuevaNomina extends StatefulWidget {
 }
 
 class _NuevaNominaState extends State<_NuevaNomina> {
-  String nombre = '', frecuencia = 'quincenal';
+  String nombre = '', frecuencia = 'quincenal', modalidad = 'normal';
   DateTime? ini, fin;
   double utilidades = 0;
   double? _tasa;
@@ -120,11 +121,14 @@ class _NuevaNominaState extends State<_NuevaNomina> {
           frecuencia: frecuencia,
           inicio: ini!,
           fin: fin!,
-          utilidadesDias: utilidades);
+          utilidadesDias: utilidades,
+          modalidad: modalidad);
       if (!mounted) return;
       if (n == 0) {
         setState(() {
-          _err = 'No hay empleados activos con esa frecuencia de pago';
+          _err = modalidad == 'contratado'
+              ? 'No hay empleados activos con modalidad Contratado'
+              : 'No hay empleados activos con esa frecuencia de pago';
           _busy = false;
         });
       } else {
@@ -145,20 +149,47 @@ class _NuevaNominaState extends State<_NuevaNomina> {
           width: anchoDialogo(context, 420),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(
-                decoration: const InputDecoration(
-                    labelText: 'Nombre (ej. 1ra quincena octubre)'),
+                decoration: InputDecoration(
+                    labelText: modalidad == 'contratado'
+                        ? 'Nombre (ej. Contratados octubre)'
+                        : 'Nombre (ej. 1ra quincena octubre)'),
                 onChanged: (v) => nombre = v),
             DropdownButtonFormField<String>(
-              value: frecuencia,
-              decoration:
-                  const InputDecoration(labelText: 'Frecuencia (Art. 150 LOT)'),
+              initialValue: modalidad,
+              decoration: const InputDecoration(labelText: 'Tipo de nómina'),
               items: const [
-                DropdownMenuItem(value: 'semanal', child: Text('semanal')),
-                DropdownMenuItem(value: 'quincenal', child: Text('quincenal')),
-                DropdownMenuItem(value: 'mensual', child: Text('mensual')),
+                DropdownMenuItem(value: 'normal', child: Text('Normal')),
+                DropdownMenuItem(
+                    value: 'contratado', child: Text('Contratados')),
               ],
-              onChanged: (v) => setState(() => frecuencia = v!),
+              onChanged: (v) => setState(() {
+                modalidad = v ?? 'normal';
+                if (modalidad == 'contratado') {
+                  frecuencia = 'mensual';
+                  utilidades = 0;
+                }
+              }),
             ),
+            if (modalidad == 'normal')
+              DropdownButtonFormField<String>(
+                value: frecuencia,
+                decoration: const InputDecoration(
+                    labelText: 'Frecuencia (Art. 150 LOT)'),
+                items: const [
+                  DropdownMenuItem(value: 'semanal', child: Text('semanal')),
+                  DropdownMenuItem(value: 'quincenal', child: Text('quincenal')),
+                  DropdownMenuItem(value: 'mensual', child: Text('mensual')),
+                ],
+                onChanged: (v) => setState(() => frecuencia = v!),
+              )
+            else
+              const ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.event_repeat),
+                title: Text('Frecuencia: mensual'),
+                subtitle: Text(
+                    'Nómina de contratados: solo sueldo, sin deducciones.'),
+              ),
             ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text('Desde: ${ini == null ? '—' : fecha(ini!)}'),
@@ -176,12 +207,13 @@ class _NuevaNominaState extends State<_NuevaNomina> {
                     await _cargarTasa();
                   }
                 }),
-            TextField(
-                decoration: const InputDecoration(
-                    labelText:
-                        'Días de utilidades a pagar en esta nómina (0 = ninguno)'),
-                onChanged: (v) =>
-                    utilidades = double.tryParse(v.replaceAll(',', '.')) ?? 0),
+            if (modalidad == 'normal')
+              TextField(
+                  decoration: const InputDecoration(
+                      labelText:
+                          'Días de utilidades a pagar en esta nómina (0 = ninguno)'),
+                  onChanged: (v) =>
+                      utilidades = double.tryParse(v.replaceAll(',', '.')) ?? 0),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.currency_exchange),
@@ -494,7 +526,9 @@ class _NominaDetalleState extends State<_NominaDetalle> {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${n.nombre} · ${fecha(n.inicio)} a ${fecha(n.fin)}',
+                    Text(
+                        '${n.nombre} · ${fecha(n.inicio)} a ${fecha(n.fin)}'
+                        '${n.modalidad == 'contratado' ? ' · Contratados' : ''}',
                         style: Theme.of(context).textTheme.titleMedium),
                     Text(
                         'Aportes patronales — IVSS ${money.format(n.totalAporteIvss)} · RPE ${money.format(n.totalAporteRpe)} · FAOV ${money.format(n.totalAporteFaov)} · LOPCYMAT ${money.format(n.totalAporteLopcymat)}  (Total ${money.format(n.totalAportes)})',

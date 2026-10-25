@@ -163,7 +163,8 @@ pw.Widget _reciboWidget({
       ),
       pw.Divider(),
       pw.Text(
-          'Nómina: ${nomina.nombre}  ·  Período: ${_f(nomina.inicio)} a ${_f(nomina.fin)}',
+          'Nómina: ${nomina.nombre}  ·  Período: ${_f(nomina.inicio)} a ${_f(nomina.fin)}'
+          '${nomina.modalidad == 'contratado' ? '  ·  Contratados' : ''}',
           style: bold),
       pw.Text(
           'Frecuencia: ${nomina.frecuencia}'

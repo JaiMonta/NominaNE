@@ -39,7 +39,7 @@ class Departamento {
 
 class Empleado {
   final String? id;
-  String cedula, nombres, apellidos, tipo, jornada, frecuenciaPago;
+  String cedula, nombres, apellidos, tipo, jornada, frecuenciaPago, modalidad;
   String? cargo, departamento, departamentoId, banco, cuenta, email, telefono;
   DateTime fechaIngreso;
   DateTime? fechaEgreso, fechaNacimiento;
@@ -61,6 +61,7 @@ class Empleado {
     this.salarioMensualUsd = 0,
     this.jornada = 'diurna',
     this.frecuenciaPago = 'quincenal',
+    this.modalidad = 'normal',
     this.banco,
     this.cuenta,
     this.email,
@@ -88,6 +89,7 @@ class Empleado {
         salarioMensualUsd: _d(j['salario_mensual_usd']),
         jornada: j['jornada'] ?? 'diurna',
         frecuenciaPago: j['frecuencia_pago'] ?? 'quincenal',
+        modalidad: j['modalidad_nomina'] ?? 'normal',
         banco: j['banco'],
         cuenta: j['cuenta'],
         email: j['email'],
@@ -110,6 +112,7 @@ class Empleado {
         'salario_mensual_usd': salarioMensualUsd,
         'jornada': jornada,
         'frecuencia_pago': frecuenciaPago,
+        'modalidad_nomina': modalidad,
         'banco': banco,
         'cuenta': cuenta,
         'email': email,
@@ -166,7 +169,7 @@ class Concepto {
 
 class Nomina {
   final String id;
-  final String nombre, frecuencia, estado;
+  final String nombre, frecuencia, estado, modalidad;
   final DateTime inicio, fin;
   final double totalIngresos, totalEgresos, totalNeto, totalAportes;
   final double totalAporteIvss, totalAporteRpe, totalAporteFaov, totalAporteLopcymat;
@@ -177,6 +180,7 @@ class Nomina {
         nombre = j['nombre'],
         frecuencia = j['frecuencia'] ?? '',
         estado = j['estado'] ?? 'borrador',
+        modalidad = j['modalidad_nomina'] ?? 'normal',
         inicio = DateTime.parse(j['periodo_inicio']),
         fin = DateTime.parse(j['periodo_fin']),
         totalIngresos = _d(j['total_ingresos']),

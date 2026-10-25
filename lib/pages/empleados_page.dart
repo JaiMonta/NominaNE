@@ -27,6 +27,7 @@ class EmpleadosPage extends StatefulWidget {
 class _EmpleadosPageState extends State<EmpleadosPage> {
   late Future<List<Empleado>> _f = Repo.empleados();
   bool? _estado;
+  String? _modalidad;
   void _reload() => setState(() => _f = Repo.empleados());
 
   Future<void> _editar(Empleado? e) async {
@@ -38,22 +39,48 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
   Widget _filtro(List<Empleado> l) {
     final activos = l.where((e) => e.activo).length;
     final inactivos = l.length - activos;
-    Widget chip(String texto, bool? valor) => ChoiceChip(
+    final normales = l.where((e) => e.modalidad == 'normal').length;
+    final contratados = l.length - normales;
+    Widget chipEstado(String texto, bool? valor) => ChoiceChip(
           label: Text(texto),
           selected: _estado == valor,
           onSelected: (_) => setState(() => _estado = valor),
         );
+    Widget chipModalidad(String texto, String? valor) => ChoiceChip(
+          label: Text(texto),
+          selected: _modalidad == valor,
+          onSelected: (_) => setState(() => _modalidad = valor),
+        );
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        crossAxisAlignment: WrapCrossAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Mostrar:', style: TextStyle(fontWeight: FontWeight.w600)),
-          chip('Todos (${l.length})', null),
-          chip('Activos ($activos)', true),
-          chip('No activos ($inactivos)', false),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              const Text('Mostrar:',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              chipEstado('Todos (${l.length})', null),
+              chipEstado('Activos ($activos)', true),
+              chipEstado('No activos ($inactivos)', false),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              const Text('Nómina:',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              chipModalidad('Todas (${l.length})', null),
+              chipModalidad('Normal ($normales)', 'normal'),
+              chipModalidad('Contratados ($contratados)', 'contratado'),
+            ],
+          ),
         ],
       ),
     );
@@ -73,9 +100,10 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
             if (s.hasError) return Center(child: Text('Error: ${s.error}'));
             if (!s.hasData) return const Center(child: CircularProgressIndicator());
             final l = s.data!;
-            final filtrados = _estado == null
-                ? l
-                : l.where((e) => e.activo == _estado).toList();
+            final filtrados = l
+                .where((e) => _estado == null || e.activo == _estado)
+                .where((e) => _modalidad == null || e.modalidad == _modalidad)
+                .toList();
             return Column(
               children: [
                 _filtro(l),
@@ -97,6 +125,7 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                                           subtitle: Text(
                                               '${e.cedula} · ${e.cargo ?? ''}\n'
                                               '${e.departamento ?? 'Sin departamento'} · ${e.tipo} · ${e.frecuenciaPago}'
+                                              '${e.modalidad == 'contratado' ? ' · Contratado' : ''}'
                                               '${_extraEmpleado(e)}'),
                                           isThreeLine: true,
                                           trailing: Column(
@@ -143,6 +172,7 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                                         DataColumn(
                                             label: Text('Departamento')),
                                         DataColumn(label: Text('Frecuencia')),
+                                        DataColumn(label: Text('Nómina')),
                                         DataColumn(
                                             label: Text('Salario mensual (USD)'),
                                             numeric: true),
@@ -169,6 +199,10 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                                               DataCell(
                                                   Text(e.departamento ?? '')),
                                               DataCell(Text(e.frecuenciaPago)),
+                                              DataCell(
+                                                  Text(e.modalidad == 'contratado'
+                                                      ? 'Contratado'
+                                                      : 'Normal')),
                                               DataCell(Text(
                                                   'US\$ ${usd.format(e.salarioMensualUsd)}')),
                                               DataCell(Icon(e.activo
@@ -319,6 +353,29 @@ class _EmpleadoDialogState extends State<_EmpleadoDialog> {
                 _departamento(),
                 _dd('Tipo (Art. 41/43 LOT)', e.tipo, ['empleado', 'obrero'],
                     (v) => setState(() => e.tipo = v)),
+                DropdownButtonFormField<String>(
+                  initialValue: e.modalidad,
+                  decoration:
+                      const InputDecoration(labelText: 'Modalidad de nómina'),
+                  items: const [
+                    DropdownMenuItem(value: 'normal', child: Text('Normal')),
+                    DropdownMenuItem(
+                        value: 'contratado', child: Text('Contratado')),
+                  ],
+                  onChanged: (v) => setState(() {
+                    e.modalidad = v ?? 'normal';
+                    if (e.modalidad == 'contratado') {
+                      e.frecuenciaPago = 'mensual';
+                    }
+                  }),
+                ),
+                if (e.modalidad == 'contratado')
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                        'Contratado: nómina mensual, solo sueldo, sin deducciones.',
+                        style: Theme.of(context).textTheme.bodySmall),
+                  ),
                 _dd('Jornada', e.jornada, ['diurna', 'nocturna', 'mixta'],
                     (v) => setState(() => e.jornada = v)),
                 _dd('Frecuencia de pago', e.frecuenciaPago,

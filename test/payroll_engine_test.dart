@@ -312,4 +312,40 @@ void main() {
     expect(r.lineas.firstWhere((l) => l.codigo == 'IVSS').monto, 22.15);
     expect(r.aporteIvss, 60.92);
   });
+
+  test('soloSueldo paga únicamente el sueldo mensual sin deducciones', () {
+    final motor = PayrollEngine({
+      'dias_mes': 30,
+      'ivss_empleado_pct': 0.04,
+      'ivss_patrono_pct': 0.11,
+      'rpe_empleado_pct': 0.005,
+      'faov_empleado_pct': 0.01,
+      'ivss_tope_salarios_min': 5,
+      'salario_minimo_mensual': 130,
+    });
+    final r = motor.calcular(
+      salarioMensual: 87565,
+      frecuencia: 'mensual',
+      ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 10, 1),
+      periodoFin: DateTime(2026, 10, 31),
+      conceptos: [
+        _concepto('SUELDO', 'ingreso'),
+        _concepto('FERIADO', 'ingreso'),
+        _concepto('IVSS', 'egreso', esSalarial: false),
+        _concepto('RPE', 'egreso', esSalarial: false),
+        _concepto('FAOV', 'egreso', esSalarial: false),
+      ],
+      novedades: [EntradaNovedad('FERIADO', 1, 0)],
+      soloSueldo: true,
+    );
+
+    expect(r.lineas.length, 1);
+    expect(r.lineas.first.codigo, 'SUELDO');
+    expect(r.totalIngresos, 87565);
+    expect(r.totalEgresos, 0);
+    expect(r.neto, 87565);
+    expect(r.aportesPatronales, 0);
+    expect(r.aporteIvss, 0);
+  });
 }

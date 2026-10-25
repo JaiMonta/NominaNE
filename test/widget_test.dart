@@ -42,4 +42,26 @@ void main() {
     expect(sinJoin.departamento, 'Ventas');
     expect(sinJoin.departamentoId, isNull);
   });
+
+  test('Empleado y Nomina leen modalidad_nomina', () {
+    final e = Empleado.fromJson({
+      'cedula': '3',
+      'nombres': 'Ana',
+      'apellidos': 'Pérez',
+      'fecha_ingreso': '2026-01-01',
+      'modalidad_nomina': 'contratado',
+    });
+    expect(e.modalidad, 'contratado');
+
+    final n = Nomina.fromJson({
+      'id': 'n1',
+      'nombre': 'Contratados',
+      'frecuencia': 'mensual',
+      'estado': 'borrador',
+      'periodo_inicio': '2026-10-01',
+      'periodo_fin': '2026-10-31',
+      'modalidad_nomina': 'contratado',
+    });
+    expect(n.modalidad, 'contratado');
+  });
 }

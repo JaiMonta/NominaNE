@@ -150,6 +150,7 @@ class PayrollEngine {
     required List<EntradaNovedad> novedades,
     double aplicarUtilidadesDias = 0,
     double riesgoLopcymat = 0,
+    bool soloSueldo = false,
   }) {
     final lineas = <LineaRecibo>[];
     final sd = salarioDiario(salarioMensual);
@@ -189,7 +190,7 @@ class PayrollEngine {
     ing('SUELDO', dias, sd * dias);
 
     // 2. Novedades (horas extra, recargos, feriados, bonos, préstamos...)
-    for (final n in novedades) {
+    for (final n in soloSueldo ? const <EntradaNovedad>[] : novedades) {
       final codigo = n.conceptoCodigo.trim().toUpperCase();
       final c = mapa[codigo];
       if (c == null) continue;
@@ -242,7 +243,7 @@ class PayrollEngine {
     // 3. Vacaciones, bono vacacional y utilidades (si se solicitan)
     // VACACIONES / BONO_VAC se cargan como novedad con cantidad en días
     // (ver diasVacaciones / diasBonoVacacional para sugerir la cantidad).
-    if (aplicarUtilidadesDias > 0) {
+    if (!soloSueldo && aplicarUtilidadesDias > 0) {
       ing('UTILIDADES', aplicarUtilidadesDias, sd * aplicarUtilidadesDias);
     }
 
@@ -253,37 +254,40 @@ class PayrollEngine {
 
     // IVSS: retención semanal (salario anual / 52) por cada lunes del período,
     // con tope mensual de N salarios mínimos repartido entre los lunes del mes.
-    final pctIvssEmp = _g('ivss_empleado_pct', .04);
-    final pctIvssPat = _g('ivss_patrono_pct', .09);
-    final topeMensual =
-        _g('ivss_tope_salarios_min', 5) * _g('salario_minimo_mensual', 0);
-    final salarioSemanal = salarioMensual * 12 / 52;
-    var ivssEmpleado = 0.0;
     var ivssPatrono = 0.0;
-    var lunes = 0;
-    var dia = DateTime(
-        periodoInicio.year, periodoInicio.month, periodoInicio.day);
-    final finDia = DateTime(periodoFin.year, periodoFin.month, periodoFin.day);
-    while (!dia.isAfter(finDia)) {
-      if (dia.weekday == DateTime.monday) {
-        lunes++;
-        final lunesMes = lunesEntre(
-            DateTime(dia.year, dia.month, 1),
-            DateTime(dia.year, dia.month + 1, 0));
-        final topeEmp = topeMensual > 0 && lunesMes > 0
-            ? topeMensual * pctIvssEmp / lunesMes
-            : double.infinity;
-        final topePat = topeMensual > 0 && lunesMes > 0
-            ? topeMensual * pctIvssPat / lunesMes
-            : double.infinity;
-        ivssEmpleado += min(salarioSemanal * pctIvssEmp, topeEmp);
-        ivssPatrono += min(salarioSemanal * pctIvssPat, topePat);
+    if (!soloSueldo) {
+      final pctIvssEmp = _g('ivss_empleado_pct', .04);
+      final pctIvssPat = _g('ivss_patrono_pct', .09);
+      final topeMensual =
+          _g('ivss_tope_salarios_min', 5) * _g('salario_minimo_mensual', 0);
+      final salarioSemanal = salarioMensual * 12 / 52;
+      var ivssEmpleado = 0.0;
+      var lunes = 0;
+      var dia = DateTime(
+          periodoInicio.year, periodoInicio.month, periodoInicio.day);
+      final finDia =
+          DateTime(periodoFin.year, periodoFin.month, periodoFin.day);
+      while (!dia.isAfter(finDia)) {
+        if (dia.weekday == DateTime.monday) {
+          lunes++;
+          final lunesMes = lunesEntre(
+              DateTime(dia.year, dia.month, 1),
+              DateTime(dia.year, dia.month + 1, 0));
+          final topeEmp = topeMensual > 0 && lunesMes > 0
+              ? topeMensual * pctIvssEmp / lunesMes
+              : double.infinity;
+          final topePat = topeMensual > 0 && lunesMes > 0
+              ? topeMensual * pctIvssPat / lunesMes
+              : double.infinity;
+          ivssEmpleado += min(salarioSemanal * pctIvssEmp, topeEmp);
+          ivssPatrono += min(salarioSemanal * pctIvssPat, topePat);
+        }
+        dia = dia.add(const Duration(days: 1));
       }
-      dia = dia.add(const Duration(days: 1));
+      egr('IVSS', lunes.toDouble(), ivssEmpleado);
+      egr('RPE', 0, baseSalarial * _g('rpe_empleado_pct', .005));
+      egr('FAOV', 0, baseSalarial * _g('faov_empleado_pct', .01));
     }
-    egr('IVSS', lunes.toDouble(), ivssEmpleado);
-    egr('RPE', 0, baseSalarial * _g('rpe_empleado_pct', .005));
-    egr('FAOV', 0, baseSalarial * _g('faov_empleado_pct', .01));
 
     // 5. Límite de cuotas de préstamo: máx 1/3 del ingreso (Art. 165)
     final totalIng0 = lineas
@@ -312,12 +316,16 @@ class PayrollEngine {
 
     // Aportes patronales (desglosados por concepto)
     final aIvss = r2(ivssPatrono);
-    final aRpe = r2(baseSalarial * _g('rpe_patrono_pct', .02));
-    final aFaov = r2(baseSalarial * _g('faov_patrono_pct', .02));
-    final aLop = r2(baseSalarial *
-        (riesgoLopcymat > 0
-            ? riesgoLopcymat
-            : _g('lopcymat_patrono_pct', .0075)));
+    final aRpe =
+        soloSueldo ? 0.0 : r2(baseSalarial * _g('rpe_patrono_pct', .02));
+    final aFaov =
+        soloSueldo ? 0.0 : r2(baseSalarial * _g('faov_patrono_pct', .02));
+    final aLop = soloSueldo
+        ? 0.0
+        : r2(baseSalarial *
+            (riesgoLopcymat > 0
+                ? riesgoLopcymat
+                : _g('lopcymat_patrono_pct', .0075)));
     final aportes = r2(aIvss + aRpe + aFaov + aLop);
 
     return ResultadoRecibo(lineas, r2(sd), totI, totE, r2(totI - totE), aportes,
