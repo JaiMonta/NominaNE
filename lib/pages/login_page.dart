@@ -60,22 +60,23 @@ class _LoginPageState extends State<LoginPage> {
     return Column(
       children: [
         Container(
-          width: 58,
-          height: 58,
-          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: scheme.primaryContainer,
-            shape: BoxShape.circle,
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: scheme.outlineVariant),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.10),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-          child: Text(
-            'NE',
-            style: GoogleFonts.cormorantGaramond(
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1,
-              color: scheme.onPrimaryContainer,
-            ),
+          child: Image.asset(
+            'assets/branding/Logo2_trim.png',
+            width: 160,
+            fit: BoxFit.contain,
           ),
         ),
         const SizedBox(height: 16),
