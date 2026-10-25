@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/repo.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,6 +14,22 @@ class _LoginPageState extends State<LoginPage> {
   final _pass = TextEditingController();
   bool _registro = false, _cargando = false;
   String? _msg;
+  String _empresa = 'FÁBRICA DE VELAS NUEVA ERA, C.A.';
+
+  @override
+  void initState() {
+    super.initState();
+    Repo.ajuste('empresa_nombre').then((v) {
+      if (mounted && v.trim().isNotEmpty) setState(() => _empresa = v.trim());
+    }).catchError((_) {});
+  }
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _pass.dispose();
+    super.dispose();
+  }
 
   Future<void> _enviar() async {
     setState(() {
@@ -34,61 +52,161 @@ class _LoginPageState extends State<LoginPage> {
     if (mounted) setState(() => _cargando = false);
   }
 
+  Widget _marca(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Container(
+          width: 58,
+          height: 58,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: scheme.primaryContainer,
+            shape: BoxShape.circle,
+            border: Border.all(color: scheme.outlineVariant),
+          ),
+          child: Text(
+            'NE',
+            style: GoogleFonts.cormorantGaramond(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1,
+              color: scheme.onPrimaryContainer,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          _empresa,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.cormorantGaramond(
+            fontSize: 32,
+            height: 1.1,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.4,
+            color: scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'SISTEMA DE NÓMINA',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 2.8,
+            color: scheme.primary,
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(width: 48, height: 1, color: scheme.outlineVariant),
+      ],
+    );
+  }
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-        body: SafeArea(
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).scaffoldBackgroundColor,
+              scheme.surfaceContainerHighest,
+            ],
+          ),
+        ),
+        child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 380),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Text('Nómina', style: Theme.of(context).textTheme.headlineMedium),
-                      const SizedBox(height: 4),
-                      Text('LOT / LOPCYMAT',
-                          style: Theme.of(context).textTheme.bodySmall),
-                      const SizedBox(height: 16),
-                      TextField(
-                          controller: _email,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: const InputDecoration(labelText: 'Correo')),
-                      TextField(
-                          controller: _pass,
-                          obscureText: true,
-                          onSubmitted: (_) => _enviar(),
-                          decoration: const InputDecoration(labelText: 'Contraseña')),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                            onPressed: _cargando ? null : _enviar,
-                            child: _cargando
-                                ? const SizedBox(
-                                    height: 18,
-                                    width: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2))
-                                : Text(_registro ? 'Registrarme' : 'Entrar')),
-                      ),
-                      TextButton(
-                          onPressed: () => setState(() => _registro = !_registro),
-                          child: Text(_registro
-                              ? 'Ya tengo cuenta'
-                              : 'Crear cuenta (el primer usuario es administrador)')),
-                      if (_msg != null)
-                        Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Text(_msg!,
-                                style: TextStyle(
-                                    color: Theme.of(context).colorScheme.error))),
-                    ]),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 560),
+                    child: _marca(context),
                   ),
-                ),
+                  const SizedBox(height: 28),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 380),
+                    child: Card(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Iniciar sesión',
+                                style: GoogleFonts.inter(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: scheme.onSurface)),
+                            const SizedBox(height: 4),
+                            Text('Ingrese sus credenciales',
+                                style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: scheme.onSurfaceVariant)),
+                            const SizedBox(height: 20),
+                            TextField(
+                                controller: _email,
+                                keyboardType: TextInputType.emailAddress,
+                                decoration:
+                                    const InputDecoration(labelText: 'Correo')),
+                            TextField(
+                                controller: _pass,
+                                obscureText: true,
+                                onSubmitted: (_) => _enviar(),
+                                decoration: const InputDecoration(
+                                    labelText: 'Contraseña')),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton(
+                                  onPressed: _cargando ? null : _enviar,
+                                  child: _cargando
+                                      ? const SizedBox(
+                                          height: 18,
+                                          width: 18,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2))
+                                      : Text(_registro ? 'Registrarme' : 'Entrar')),
+                            ),
+                            TextButton(
+                                onPressed: () =>
+                                    setState(() => _registro = !_registro),
+                                child: Text(_registro
+                                    ? 'Ya tengo cuenta'
+                                    : 'Crear cuenta (el primer usuario es administrador)')),
+                            if (_msg != null)
+                              Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Text(_msg!,
+                                      style: TextStyle(
+                                          color: scheme.error))),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('LOT / LOPCYMAT',
+                      style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 1.6,
+                          color: scheme.onSurfaceVariant)),
+                ],
               ),
             ),
           ),
         ),
-      );
+      ),
+    );
+  }
 }

@@ -23,6 +23,7 @@ recibos de pago en USD y Bolívares (VES) a la tasa del BCV, y aportes patronale
    - `supabase/migrations/006_ivss_sin_tope.sql`
    - `supabase/migrations/007_empleados_fecha_nacimiento_telefono.sql`
    - `supabase/migrations/008_departamentos.sql`
+   - `supabase/migrations/009_ajustes_empresa_publica.sql`
 3. En *Authentication → URL Configuration* agrega tu dominio (ej.
    `https://nomina-ne.web.app`) en **Site URL** y **Additional Redirect URLs**.
    Para pruebas, en *Authentication → Providers → Email* puedes desactivar la
@@ -63,7 +64,7 @@ firebase deploy --only hosting
 `firebase.json` sirve `build/web` con rewrite SPA.
 
 ## Validación rápida
-- [ ] Migraciones 001 a 008 aplicadas.
+- [ ] Migraciones 001 a 009 aplicadas.
 - [ ] Dominio de Firebase agregado en Supabase Auth.
 - [ ] Tasa BCV del día cargada en *Tasas*.
 - [ ] Nombre/RIF de la empresa en *Parámetros*.
