@@ -274,6 +274,7 @@ class _EmpleadoDialogState extends State<_EmpleadoDialog> {
   Future<void> _guardar() async {
     if (!_k.currentState!.validate()) return;
     try {
+      if (e.modalidad == 'contratado') e.frecuenciaPago = 'mensual';
       await Repo.guardarEmpleado(e);
       if (mounted) Navigator.pop(context, true);
     } catch (x) {
@@ -378,9 +379,16 @@ class _EmpleadoDialogState extends State<_EmpleadoDialog> {
                   ),
                 _dd('Jornada', e.jornada, ['diurna', 'nocturna', 'mixta'],
                     (v) => setState(() => e.jornada = v)),
-                _dd('Frecuencia de pago', e.frecuenciaPago,
-                    ['semanal', 'quincenal', 'mensual'],
-                    (v) => setState(() => e.frecuenciaPago = v)),
+                if (e.modalidad == 'normal')
+                  _dd('Frecuencia de pago', e.frecuenciaPago,
+                      ['semanal', 'quincenal', 'mensual'],
+                      (v) => setState(() => e.frecuenciaPago = v))
+                else
+                  const ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('Frecuencia: mensual'),
+                    subtitle: Text('La nómina de contratados es mensual.'),
+                  ),
                 _t('Salario mensual (USD)', e.salarioMensualUsd == 0 ? '' : '${e.salarioMensualUsd}',
                     (v) => e.salarioMensualUsd = double.tryParse(v.replaceAll(',', '.')) ?? 0,
                     req: true, kt: TextInputType.number),
