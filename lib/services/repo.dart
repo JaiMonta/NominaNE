@@ -157,6 +157,11 @@ class Repo {
   static Future<void> cambiarEstado(String id, String estado) =>
       db.from('nominas').update({'estado': estado}).eq('id', id);
 
+  static Future<int> aprobarNomina(String id) async {
+    final res = await db.rpc('aprobar_nomina', params: {'p_nomina_id': id});
+    return res is num ? res.toInt() : 0;
+  }
+
   static Future<void> borrarNomina(String id) =>
       db.from('nominas').delete().eq('id', id);
 

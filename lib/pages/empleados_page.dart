@@ -51,6 +51,69 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
           selected: _modalidad == valor,
           onSelected: (_) => setState(() => _modalidad = valor),
         );
+    if (esMovil(context)) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                initialValue: _estado == null
+                    ? 'todos'
+                    : (_estado! ? 'activos' : 'inactivos'),
+                isExpanded: true,
+                isDense: true,
+                decoration: const InputDecoration(
+                  labelText: 'Mostrar',
+                  border: OutlineInputBorder(),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                items: [
+                  DropdownMenuItem(
+                      value: 'todos', child: Text('Todos (${l.length})')),
+                  DropdownMenuItem(
+                      value: 'activos', child: Text('Activos ($activos)')),
+                  DropdownMenuItem(
+                      value: 'inactivos',
+                      child: Text('No activos ($inactivos)')),
+                ],
+                onChanged: (v) => setState(() {
+                  _estado =
+                      v == 'activos' ? true : (v == 'inactivos' ? false : null);
+                }),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                initialValue: _modalidad ?? 'todas',
+                isExpanded: true,
+                isDense: true,
+                decoration: const InputDecoration(
+                  labelText: 'Nómina',
+                  border: OutlineInputBorder(),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                items: [
+                  DropdownMenuItem(
+                      value: 'todas', child: Text('Todas (${l.length})')),
+                  DropdownMenuItem(
+                      value: 'normal', child: Text('Normal ($normales)')),
+                  DropdownMenuItem(
+                      value: 'contratado',
+                      child: Text('Contratados ($contratados)')),
+                ],
+                onChanged: (v) => setState(
+                    () => _modalidad = v == 'todas' ? null : v),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Column(

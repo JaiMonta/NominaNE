@@ -90,16 +90,6 @@ class _ParametrosPageState extends State<ParametrosPage> {
                 onTap: widget.puedeEditar ? () => _editarTexto(a) : null,
               ),
             const Divider(),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                  'Aviso: la LOT adjunta (1997) fue reemplazada por la LOTTT (2012). '
-                  'Los porcentajes de IVSS, RPE y FAOV no provienen de los documentos adjuntos. '
-                  'El IVSS se calcula por lunes del período con un tope mensual de '
-                  '5 salarios mínimos (0 = sin tope). '
-                  'Valide cada parámetro con la normativa vigente antes de pagar.',
-                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            ),
             for (final p in ps)
               ListTile(
                 title: Text('${p['clave']} = ${p['valor']}'),

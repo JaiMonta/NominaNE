@@ -259,6 +259,41 @@ class _NominaDetalleState extends State<_NominaDetalle> {
   late String estado = widget.nomina.estado;
 
   Future<void> _estado(String e) async {
+    if (e == 'aprobada') {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Aprobar nómina'),
+          content: const Text(
+              'Se aprobará la nómina y se eliminarán las novedades no '
+              'recurrentes incluidas en este período. Las recurrentes se '
+              'conservan.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Aprobar')),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      try {
+        final eliminadas = await Repo.aprobarNomina(widget.nomina.id);
+        if (!mounted) return;
+        setState(() => estado = 'aprobada');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(eliminadas > 0
+                ? 'Nómina aprobada. Se eliminaron $eliminadas novedades no recurrentes.'
+                : 'Nómina aprobada.')));
+      } catch (x) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('No se pudo aprobar: $x')));
+      }
+      return;
+    }
     await Repo.cambiarEstado(widget.nomina.id, e);
     setState(() => estado = e);
   }
