@@ -1,9 +1,46 @@
 double _d(dynamic v) => v == null ? 0 : (v as num).toDouble();
 
+String? _departamentoJson(Map<String, dynamic> j) {
+  final d = j['departamentos'];
+  if (d is Map) return d['nombre'] as String?;
+  if (d is List && d.isNotEmpty) {
+    final first = d.first;
+    if (first is Map) return first['nombre'] as String?;
+  }
+  return j['departamento'] as String?;
+}
+
+class Departamento {
+  final String? id;
+  String nombre;
+  bool activo;
+  int orden;
+
+  Departamento({
+    this.id,
+    this.nombre = '',
+    this.activo = true,
+    this.orden = 999,
+  });
+
+  factory Departamento.fromJson(Map<String, dynamic> j) => Departamento(
+        id: j['id'],
+        nombre: j['nombre'] ?? '',
+        activo: j['activo'] ?? true,
+        orden: (j['orden'] as num?)?.toInt() ?? 999,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'nombre': nombre,
+        'activo': activo,
+        'orden': orden,
+      };
+}
+
 class Empleado {
   final String? id;
   String cedula, nombres, apellidos, tipo, jornada, frecuenciaPago;
-  String? cargo, departamento, banco, cuenta, email, telefono;
+  String? cargo, departamento, departamentoId, banco, cuenta, email, telefono;
   DateTime fechaIngreso;
   DateTime? fechaEgreso, fechaNacimiento;
   double salarioMensualUsd;
@@ -16,6 +53,7 @@ class Empleado {
     this.apellidos = '',
     this.cargo,
     this.departamento,
+    this.departamentoId,
     this.tipo = 'empleado',
     DateTime? fechaIngreso,
     this.fechaEgreso,
@@ -38,7 +76,8 @@ class Empleado {
         nombres: j['nombres'] ?? '',
         apellidos: j['apellidos'] ?? '',
         cargo: j['cargo'],
-        departamento: j['departamento'],
+        departamento: _departamentoJson(j),
+        departamentoId: j['departamento_id'],
         tipo: j['tipo'] ?? 'empleado',
         fechaIngreso: DateTime.parse(j['fecha_ingreso']),
         fechaEgreso:
@@ -62,6 +101,7 @@ class Empleado {
         'apellidos': apellidos,
         'cargo': cargo,
         'departamento': departamento,
+        'departamento_id': departamentoId,
         'tipo': tipo,
         'fecha_ingreso': fechaIngreso.toIso8601String().substring(0, 10),
         'fecha_egreso': fechaEgreso?.toIso8601String().substring(0, 10),

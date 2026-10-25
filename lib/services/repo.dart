@@ -77,7 +77,10 @@ class Repo {
 
   // ---------- Empleados ----------
   static Future<List<Empleado>> empleados() async =>
-      (await db.from('empleados').select().order('apellidos'))
+      (await db
+              .from('empleados')
+              .select('*, departamentos(nombre)')
+              .order('apellidos'))
           .map<Empleado>((j) => Empleado.fromJson(j))
           .toList();
 
@@ -86,6 +89,20 @@ class Repo {
       await db.from('empleados').insert(e.toJson());
     } else {
       await db.from('empleados').update(e.toJson()).eq('id', e.id!);
+    }
+  }
+
+  // ---------- Departamentos ----------
+  static Future<List<Departamento>> departamentos() async =>
+      (await db.from('departamentos').select().order('orden').order('nombre'))
+          .map<Departamento>((j) => Departamento.fromJson(j))
+          .toList();
+
+  static Future<void> guardarDepartamento(Departamento d) async {
+    if (d.id == null) {
+      await db.from('departamentos').insert(d.toJson());
+    } else {
+      await db.from('departamentos').update(d.toJson()).eq('id', d.id!);
     }
   }
 

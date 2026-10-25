@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nomina_app/core/payroll_engine.dart';
+import 'package:nomina_app/models/models.dart';
 
 void main() {
   test('r2 redondea a 2 decimales', () {
@@ -16,5 +17,29 @@ void main() {
     expect(e.diasVacaciones(0), 0);
     expect(e.diasVacaciones(1), 15);
     expect(e.diasVacaciones(20), 30);
+  });
+
+  test('Empleado usa el departamento relacionado y cae al texto legacy', () {
+    final conJoin = Empleado.fromJson({
+      'cedula': '1',
+      'nombres': 'Ana',
+      'apellidos': 'Pérez',
+      'fecha_ingreso': '2026-01-01',
+      'departamento': 'Texto viejo',
+      'departamento_id': 'd1',
+      'departamentos': {'nombre': 'Producción'},
+    });
+    expect(conJoin.departamento, 'Producción');
+    expect(conJoin.departamentoId, 'd1');
+
+    final sinJoin = Empleado.fromJson({
+      'cedula': '2',
+      'nombres': 'Luis',
+      'apellidos': 'Gómez',
+      'fecha_ingreso': '2026-01-01',
+      'departamento': 'Ventas',
+    });
+    expect(sinJoin.departamento, 'Ventas');
+    expect(sinJoin.departamentoId, isNull);
   });
 }

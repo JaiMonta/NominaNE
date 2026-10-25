@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme.dart';
 import '../services/repo.dart';
 import 'conceptos_page.dart';
+import 'departamentos_page.dart';
 import 'empleados_page.dart';
 import 'nominas_page.dart';
 import 'novedades_page.dart';
@@ -32,6 +33,7 @@ class _HomePageState extends State<HomePage> {
     final email = Supabase.instance.client.auth.currentUser?.email ?? '';
     final destinos = <(IconData, String)>[
       (Icons.people, 'Empleados'),
+      (Icons.account_tree, 'Departamentos'),
       (Icons.list_alt, 'Conceptos'),
       (Icons.edit_note, 'Novedades'),
       (Icons.payments, 'Nóminas'),
@@ -40,6 +42,7 @@ class _HomePageState extends State<HomePage> {
     ];
     final paginas = <Widget>[
       EmpleadosPage(puedeEditar: puedeEditar),
+      DepartamentosPage(puedeEditar: puedeEditar),
       ConceptosPage(puedeEditar: puedeEditar),
       NovedadesPage(puedeEditar: puedeEditar),
       NominasPage(puedeEditar: puedeEditar),

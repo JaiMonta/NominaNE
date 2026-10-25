@@ -26,12 +26,37 @@ class EmpleadosPage extends StatefulWidget {
 
 class _EmpleadosPageState extends State<EmpleadosPage> {
   late Future<List<Empleado>> _f = Repo.empleados();
+  bool? _estado;
   void _reload() => setState(() => _f = Repo.empleados());
 
   Future<void> _editar(Empleado? e) async {
     final ok = await showDialog<bool>(
         context: context, builder: (_) => _EmpleadoDialog(e ?? Empleado()));
     if (ok == true) _reload();
+  }
+
+  Widget _filtro(List<Empleado> l) {
+    final activos = l.where((e) => e.activo).length;
+    final inactivos = l.length - activos;
+    Widget chip(String texto, bool? valor) => ChoiceChip(
+          label: Text(texto),
+          selected: _estado == valor,
+          onSelected: (_) => setState(() => _estado = valor),
+        );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          const Text('Mostrar:', style: TextStyle(fontWeight: FontWeight.w600)),
+          chip('Todos (${l.length})', null),
+          chip('Activos ($activos)', true),
+          chip('No activos ($inactivos)', false),
+        ],
+      ),
+    );
   }
 
   @override
@@ -48,75 +73,115 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
             if (s.hasError) return Center(child: Text('Error: ${s.error}'));
             if (!s.hasData) return const Center(child: CircularProgressIndicator());
             final l = s.data!;
-            if (l.isEmpty) return const Center(child: Text('Sin empleados'));
-            if (esMovil(context)) {
-              return ListView(
-                padding: const EdgeInsets.only(top: 4, bottom: 88),
-                children: [
-                  for (final e in l)
-                    Card(
-                      child: ListTile(
-                        title: Text(e.nombreCompleto),
-                        subtitle: Text(
-                            '${e.cedula} · ${e.cargo ?? ''}\n${e.tipo} · ${e.frecuenciaPago}${_extraEmpleado(e)}'),
-                        isThreeLine: true,
-                        trailing: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text('US\$ ${usd.format(e.salarioMensualUsd)}',
-                                style: const TextStyle(fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 4),
-                            Icon(e.activo ? Icons.check_circle : Icons.cancel,
-                                size: 18,
-                                color: e.activo ? Paleta.ingreso : Paleta.egreso),
-                          ],
-                        ),
-                        onTap: widget.puedeEditar ? () => _editar(e) : null,
-                      ),
-                    ),
-                ],
-              );
-            }
-            return SingleChildScrollView(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  columns: const [
-                    DataColumn(label: Text('Cédula')),
-                    DataColumn(label: Text('Nombre')),
-                    DataColumn(label: Text('Nacimiento')),
-                    DataColumn(label: Text('Teléfono')),
-                    DataColumn(label: Text('Tipo')),
-                    DataColumn(label: Text('Cargo')),
-                    DataColumn(label: Text('Frecuencia')),
-                    DataColumn(label: Text('Salario mensual (USD)'), numeric: true),
-                    DataColumn(label: Text('Activo')),
-                  ],
-                  rows: [
-                    for (final e in l)
-                      DataRow(
-                        onSelectChanged:
-                            widget.puedeEditar ? (_) => _editar(e) : null,
-                        cells: [
-                          DataCell(Text(e.cedula)),
-                          DataCell(Text(e.nombreCompleto)),
-                          DataCell(Text(e.fechaNacimiento == null
-                              ? ''
-                              : DateFormat('dd/MM/yyyy')
-                                  .format(e.fechaNacimiento!))),
-                          DataCell(Text(e.telefono ?? '')),
-                          DataCell(Text(e.tipo)),
-                          DataCell(Text(e.cargo ?? '')),
-                          DataCell(Text(e.frecuenciaPago)),
-                          DataCell(Text('US\$ ${usd.format(e.salarioMensualUsd)}')),
-                          DataCell(Icon(e.activo ? Icons.check : Icons.close)),
-                        ],
-                      )
-                  ],
+            final filtrados = _estado == null
+                ? l
+                : l.where((e) => e.activo == _estado).toList();
+            return Column(
+              children: [
+                _filtro(l),
+                Expanded(
+                  child: l.isEmpty
+                      ? const Center(child: Text('Sin empleados'))
+                      : filtrados.isEmpty
+                          ? const Center(
+                              child: Text('Sin empleados en este filtro'))
+                          : esMovil(context)
+                              ? ListView(
+                                  padding:
+                                      const EdgeInsets.only(top: 4, bottom: 88),
+                                  children: [
+                                    for (final e in filtrados)
+                                      Card(
+                                        child: ListTile(
+                                          title: Text(e.nombreCompleto),
+                                          subtitle: Text(
+                                              '${e.cedula} · ${e.cargo ?? ''}\n'
+                                              '${e.departamento ?? 'Sin departamento'} · ${e.tipo} · ${e.frecuenciaPago}'
+                                              '${_extraEmpleado(e)}'),
+                                          isThreeLine: true,
+                                          trailing: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.end,
+                                            children: [
+                                              Text(
+                                                  'US\$ ${usd.format(e.salarioMensualUsd)}',
+                                                  style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold)),
+                                              const SizedBox(height: 4),
+                                              Icon(
+                                                  e.activo
+                                                      ? Icons.check_circle
+                                                      : Icons.cancel,
+                                                  size: 18,
+                                                  color: e.activo
+                                                      ? Paleta.ingreso
+                                                      : Paleta.egreso),
+                                            ],
+                                          ),
+                                          onTap: widget.puedeEditar
+                                              ? () => _editar(e)
+                                              : null,
+                                        ),
+                                      ),
+                                  ],
+                                )
+                              : SingleChildScrollView(
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: DataTable(
+                                      columns: const [
+                                        DataColumn(label: Text('Cédula')),
+                                        DataColumn(label: Text('Nombre')),
+                                        DataColumn(label: Text('Nacimiento')),
+                                        DataColumn(label: Text('Teléfono')),
+                                        DataColumn(label: Text('Tipo')),
+                                        DataColumn(label: Text('Cargo')),
+                                        DataColumn(
+                                            label: Text('Departamento')),
+                                        DataColumn(label: Text('Frecuencia')),
+                                        DataColumn(
+                                            label: Text('Salario mensual (USD)'),
+                                            numeric: true),
+                                        DataColumn(label: Text('Activo')),
+                                      ],
+                                      rows: [
+                                        for (final e in filtrados)
+                                          DataRow(
+                                            onSelectChanged: widget.puedeEditar
+                                                ? (_) => _editar(e)
+                                                : null,
+                                            cells: [
+                                              DataCell(Text(e.cedula)),
+                                              DataCell(Text(e.nombreCompleto)),
+                                              DataCell(Text(e.fechaNacimiento ==
+                                                      null
+                                                  ? ''
+                                                  : DateFormat('dd/MM/yyyy')
+                                                      .format(
+                                                          e.fechaNacimiento!))),
+                                              DataCell(Text(e.telefono ?? '')),
+                                              DataCell(Text(e.tipo)),
+                                              DataCell(Text(e.cargo ?? '')),
+                                              DataCell(
+                                                  Text(e.departamento ?? '')),
+                                              DataCell(Text(e.frecuenciaPago)),
+                                              DataCell(Text(
+                                                  'US\$ ${usd.format(e.salarioMensualUsd)}')),
+                                              DataCell(Icon(e.activo
+                                                  ? Icons.check
+                                                  : Icons.close)),
+                                            ],
+                                          )
+                                      ],
+                                    ),
+                                  ),
+                                ),
                 ),
-              ),
+              ],
             );
           },
         ),
@@ -133,6 +198,7 @@ class _EmpleadoDialog extends StatefulWidget {
 class _EmpleadoDialogState extends State<_EmpleadoDialog> {
   final _k = GlobalKey<FormState>();
   late final e = widget.e;
+  final _depts = Repo.departamentos();
   String? _err;
 
   Widget _t(String l, String? v, void Function(String) set,
@@ -181,6 +247,53 @@ class _EmpleadoDialogState extends State<_EmpleadoDialog> {
     }
   }
 
+  Widget _departamento() => FutureBuilder<List<Departamento>>(
+        future: _depts,
+        builder: (_, s) {
+          if (s.hasError) {
+            return Text('No se pudieron cargar los departamentos: ${s.error}',
+                style: TextStyle(color: Theme.of(context).colorScheme.error));
+          }
+          if (!s.hasData) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: LinearProgressIndicator(),
+            );
+          }
+          final deps = s.data!
+              .where((d) => d.activo || d.id == e.departamentoId)
+              .toList();
+          if (e.departamentoId != null &&
+              !deps.any((d) => d.id == e.departamentoId)) {
+            deps.add(Departamento(
+                id: e.departamentoId,
+                nombre: e.departamento ?? 'Sin nombre'));
+          }
+          return DropdownButtonFormField<String>(
+            initialValue: e.departamentoId ?? '',
+            decoration: const InputDecoration(labelText: 'Departamento'),
+            items: [
+              const DropdownMenuItem(
+                  value: '', child: Text('Sin departamento')),
+              for (final d in deps)
+                DropdownMenuItem(
+                  value: d.id!,
+                  child: Text(d.activo ? d.nombre : '${d.nombre} (inactivo)'),
+                ),
+            ],
+            onChanged: (v) => setState(() {
+              if (v == null || v.isEmpty) {
+                e.departamentoId = null;
+                e.departamento = null;
+              } else {
+                e.departamentoId = v;
+                e.departamento = deps.firstWhere((d) => d.id == v).nombre;
+              }
+            }),
+          );
+        },
+      );
+
   @override
   Widget build(BuildContext context) => AlertDialog(
         title: Text(e.id == null ? 'Nuevo empleado' : 'Editar empleado'),
@@ -203,7 +316,7 @@ class _EmpleadoDialogState extends State<_EmpleadoDialog> {
                 _t('Teléfono', e.telefono, (v) => e.telefono = v.trim(),
                     kt: TextInputType.phone),
                 _t('Cargo', e.cargo, (v) => e.cargo = v),
-                _t('Departamento', e.departamento, (v) => e.departamento = v),
+                _departamento(),
                 _dd('Tipo (Art. 41/43 LOT)', e.tipo, ['empleado', 'obrero'],
                     (v) => setState(() => e.tipo = v)),
                 _dd('Jornada', e.jornada, ['diurna', 'nocturna', 'mixta'],
