@@ -251,6 +251,7 @@ class Repo {
         salarioMensual: bs(e.salarioMensualUsd),
         frecuencia: frecuencia,
         ingreso: e.fechaIngreso,
+        periodoInicio: inicio,
         periodoFin: fin,
         conceptos: entConceptos,
         novedades: novs,

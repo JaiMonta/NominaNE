@@ -3,6 +3,8 @@
 // reemplazada por la LOTTT 2012 y los porcentajes de IVSS/RPE/FAOV no están
 // en los documentos adjuntos. Validar siempre contra la normativa vigente.
 
+import 'dart:math';
+
 class LineaRecibo {
   final String codigo;
   final String nombre;
@@ -70,6 +72,19 @@ class ResultadoRecibo {
 
 double r2(double v) => (v * 100).roundToDouble() / 100;
 
+/// Cantidad de lunes (inclusive) entre [inicio] y [fin].
+int lunesEntre(DateTime inicio, DateTime fin) {
+  if (fin.isBefore(inicio)) return 0;
+  var d = DateTime(inicio.year, inicio.month, inicio.day);
+  final f = DateTime(fin.year, fin.month, fin.day);
+  var n = 0;
+  while (!d.isAfter(f)) {
+    if (d.weekday == DateTime.monday) n++;
+    d = d.add(const Duration(days: 1));
+  }
+  return n;
+}
+
 class PayrollEngine {
   final Map<String, double> p;
   PayrollEngine(this.p);
@@ -129,6 +144,7 @@ class PayrollEngine {
     required double salarioMensual,
     required String frecuencia,
     required DateTime ingreso,
+    required DateTime periodoInicio,
     required DateTime periodoFin,
     required List<EntradaConcepto> conceptos,
     required List<EntradaNovedad> novedades,
@@ -234,14 +250,38 @@ class PayrollEngine {
     final baseSalarial = lineas
         .where((l) => l.tipo == 'ingreso' && l.esSalarial)
         .fold<double>(0, (s, l) => s + l.monto);
-    // IVSS: tope en salarios mínimos (0 = sin tope), prorrateado al período
-    final factorMes = dias / _g('dias_mes', 30);
-    final topeIvss = _g('ivss_tope_salarios_min', 5) *
-        _g('salario_minimo_mensual', 0) *
-        factorMes;
-    final baseIvss =
-        (topeIvss > 0 && baseSalarial > topeIvss) ? topeIvss : baseSalarial;
-    egr('IVSS', 0, baseIvss * _g('ivss_empleado_pct', .04));
+
+    // IVSS: retención semanal (salario anual / 52) por cada lunes del período,
+    // con tope mensual de N salarios mínimos repartido entre los lunes del mes.
+    final pctIvssEmp = _g('ivss_empleado_pct', .04);
+    final pctIvssPat = _g('ivss_patrono_pct', .09);
+    final topeMensual =
+        _g('ivss_tope_salarios_min', 5) * _g('salario_minimo_mensual', 0);
+    final salarioSemanal = salarioMensual * 12 / 52;
+    var ivssEmpleado = 0.0;
+    var ivssPatrono = 0.0;
+    var lunes = 0;
+    var dia = DateTime(
+        periodoInicio.year, periodoInicio.month, periodoInicio.day);
+    final finDia = DateTime(periodoFin.year, periodoFin.month, periodoFin.day);
+    while (!dia.isAfter(finDia)) {
+      if (dia.weekday == DateTime.monday) {
+        lunes++;
+        final lunesMes = lunesEntre(
+            DateTime(dia.year, dia.month, 1),
+            DateTime(dia.year, dia.month + 1, 0));
+        final topeEmp = topeMensual > 0 && lunesMes > 0
+            ? topeMensual * pctIvssEmp / lunesMes
+            : double.infinity;
+        final topePat = topeMensual > 0 && lunesMes > 0
+            ? topeMensual * pctIvssPat / lunesMes
+            : double.infinity;
+        ivssEmpleado += min(salarioSemanal * pctIvssEmp, topeEmp);
+        ivssPatrono += min(salarioSemanal * pctIvssPat, topePat);
+      }
+      dia = dia.add(const Duration(days: 1));
+    }
+    egr('IVSS', lunes.toDouble(), ivssEmpleado);
     egr('RPE', 0, baseSalarial * _g('rpe_empleado_pct', .005));
     egr('FAOV', 0, baseSalarial * _g('faov_empleado_pct', .01));
 
@@ -271,7 +311,7 @@ class PayrollEngine {
         .fold<double>(0, (s, l) => s + l.monto));
 
     // Aportes patronales (desglosados por concepto)
-    final aIvss = r2(baseIvss * _g('ivss_patrono_pct', .09));
+    final aIvss = r2(ivssPatrono);
     final aRpe = r2(baseSalarial * _g('rpe_patrono_pct', .02));
     final aFaov = r2(baseSalarial * _g('faov_patrono_pct', .02));
     final aLop = r2(baseSalarial *

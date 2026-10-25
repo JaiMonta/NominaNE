@@ -18,6 +18,13 @@ EntradaConcepto _concepto(
     );
 
 void main() {
+  test('lunesEntre cuenta lunes inclusivos', () {
+    expect(lunesEntre(DateTime(2026, 10, 1), DateTime(2026, 10, 15)), 2);
+    expect(lunesEntre(DateTime(2026, 10, 16), DateTime(2026, 10, 31)), 2);
+    expect(lunesEntre(DateTime(2026, 10, 1), DateTime(2026, 10, 31)), 4);
+    expect(lunesEntre(DateTime(2026, 11, 1), DateTime(2026, 11, 30)), 5);
+  });
+
   test('ingreso no salarial suma al neto pero no a la base de aportes', () {
     final motor = PayrollEngine({
       'dias_mes': 30,
@@ -32,6 +39,7 @@ void main() {
       salarioMensual: 3000,
       frecuencia: 'mensual',
       ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 1, 1),
       periodoFin: DateTime(2026, 1, 31),
       conceptos: [
         _concepto('SUELDO', 'ingreso'),
@@ -48,15 +56,16 @@ void main() {
     expect(r.totalIngresoSalarial, 3000);
     expect(r.totalIngresoExtra, 100);
     expect(r.totalIngresos, 3100);
-    expect(r.totalEgresos, 170);
-    expect(r.neto, 2930);
+    expect(r.totalEgresos, 160.77);
+    expect(r.neto, 2939.23);
 
     final bono = r.lineas.firstWhere((l) => l.codigo == 'BONO_ALIM');
     expect(bono.esSalarial, isFalse);
 
-    // IVSS se calcula solo sobre el sueldo salarial (3000), no sobre el extra.
+    // IVSS: 4% semanal (3000 × 12 / 52) por 4 lunes de enero 2026.
     final ivss = r.lineas.firstWhere((l) => l.codigo == 'IVSS');
-    expect(ivss.monto, 120);
+    expect(ivss.cantidad, 4);
+    expect(ivss.monto, 110.77);
   });
 
   test('concepto fijo no salarial se calcula por cantidad', () {
@@ -65,6 +74,7 @@ void main() {
       salarioMensual: 3000,
       frecuencia: 'mensual',
       ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 1, 1),
       periodoFin: DateTime(2026, 1, 31),
       conceptos: [
         _concepto('SUELDO', 'ingreso'),
@@ -89,6 +99,7 @@ void main() {
       salarioMensual: 2400, // salario diario 80, salario hora 10
       frecuencia: 'mensual',
       ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 1, 1),
       periodoFin: DateTime(2026, 1, 31),
       conceptos: [
         _concepto('SUELDO', 'ingreso'),
@@ -110,6 +121,7 @@ void main() {
       salarioMensual: 2400,
       frecuencia: 'mensual',
       ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 1, 1),
       periodoFin: DateTime(2026, 1, 31),
       conceptos: [
         _concepto('SUELDO', 'ingreso'),
@@ -121,7 +133,7 @@ void main() {
     expect(r.lineas.firstWhere((l) => l.codigo == 'HE_NOCT').monto, 100);
   });
 
-  test('IVSS sin tope usa toda la base salarial', () {
+  test('IVSS semanal sin tope en quincena de 2 lunes', () {
     final motor = PayrollEngine({
       'dias_mes': 30,
       'horas_jornada_diurna': 8,
@@ -135,6 +147,7 @@ void main() {
       salarioMensual: 87565,
       frecuencia: 'quincenal',
       ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 10, 1),
       periodoFin: DateTime(2026, 10, 15),
       conceptos: [
         _concepto('SUELDO', 'ingreso'),
@@ -145,11 +158,13 @@ void main() {
     );
 
     expect(r.totalIngresoSalarial, 48160.75);
-    expect(r.lineas.firstWhere((l) => l.codigo == 'IVSS').monto, 1926.43);
-    expect(r.aporteIvss, 5297.68);
+    final ivss = r.lineas.firstWhere((l) => l.codigo == 'IVSS');
+    expect(ivss.cantidad, 2);
+    expect(ivss.monto, 1616.58);
+    expect(r.aporteIvss, 4445.61);
   });
 
-  test('IVSS con tope 5 y mínimo 130 conserva el tope', () {
+  test('IVSS con tope 5 reparte el máximo mensual por lunes', () {
     final motor = PayrollEngine({
       'dias_mes': 30,
       'horas_jornada_diurna': 8,
@@ -163,6 +178,7 @@ void main() {
       salarioMensual: 87565,
       frecuencia: 'quincenal',
       ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 10, 1),
       periodoFin: DateTime(2026, 10, 15),
       conceptos: [
         _concepto('SUELDO', 'ingreso'),
@@ -172,11 +188,13 @@ void main() {
       novedades: [EntradaNovedad('FERIADO', 1, 0)],
     );
 
-    expect(r.lineas.firstWhere((l) => l.codigo == 'IVSS').monto, 13);
+    final ivss = r.lineas.firstWhere((l) => l.codigo == 'IVSS');
+    expect(ivss.cantidad, 2);
+    expect(ivss.monto, 13);
     expect(r.aporteIvss, 35.75);
   });
 
-  test('IVSS sin tope en nómina mensual usa el salario completo', () {
+  test('IVSS semanal sin tope en nómina mensual', () {
     final motor = PayrollEngine({
       'dias_mes': 30,
       'ivss_empleado_pct': 0.04,
@@ -188,6 +206,7 @@ void main() {
       salarioMensual: 87565,
       frecuencia: 'mensual',
       ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 10, 1),
       periodoFin: DateTime(2026, 10, 31),
       conceptos: [
         _concepto('SUELDO', 'ingreso'),
@@ -196,7 +215,101 @@ void main() {
       novedades: [],
     );
 
-    expect(r.lineas.firstWhere((l) => l.codigo == 'IVSS').monto, 3502.60);
-    expect(r.aporteIvss, 9632.15);
+    final ivss = r.lineas.firstWhere((l) => l.codigo == 'IVSS');
+    expect(ivss.cantidad, 4);
+    expect(ivss.monto, 3233.17);
+    expect(r.aporteIvss, 8891.22);
+  });
+
+  test('IVSS mensual con tope 5 queda en 26 Bs', () {
+    final motor = PayrollEngine({
+      'dias_mes': 30,
+      'ivss_empleado_pct': 0.04,
+      'ivss_patrono_pct': 0.11,
+      'ivss_tope_salarios_min': 5,
+      'salario_minimo_mensual': 130,
+    });
+    final r = motor.calcular(
+      salarioMensual: 87565,
+      frecuencia: 'mensual',
+      ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 10, 1),
+      periodoFin: DateTime(2026, 10, 31),
+      conceptos: [
+        _concepto('SUELDO', 'ingreso'),
+        _concepto('IVSS', 'egreso', esSalarial: false),
+      ],
+      novedades: [],
+    );
+
+    final ivss = r.lineas.firstWhere((l) => l.codigo == 'IVSS');
+    expect(ivss.cantidad, 4);
+    expect(ivss.monto, 26);
+    expect(r.aporteIvss, 71.50);
+  });
+
+  test('IVSS con tope en mes de 5 lunes y quincena de 3 lunes', () {
+    final motor = PayrollEngine({
+      'dias_mes': 30,
+      'ivss_empleado_pct': 0.04,
+      'ivss_patrono_pct': 0.11,
+      'ivss_tope_salarios_min': 5,
+      'salario_minimo_mensual': 130,
+    });
+    final mes = motor.calcular(
+      salarioMensual: 87565,
+      frecuencia: 'mensual',
+      ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 11, 1),
+      periodoFin: DateTime(2026, 11, 30),
+      conceptos: [
+        _concepto('SUELDO', 'ingreso'),
+        _concepto('IVSS', 'egreso', esSalarial: false),
+      ],
+      novedades: [],
+    );
+    final quincena = motor.calcular(
+      salarioMensual: 87565,
+      frecuencia: 'quincenal',
+      ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 11, 16),
+      periodoFin: DateTime(2026, 11, 30),
+      conceptos: [
+        _concepto('SUELDO', 'ingreso'),
+        _concepto('IVSS', 'egreso', esSalarial: false),
+      ],
+      novedades: [],
+    );
+
+    expect(mes.lineas.firstWhere((l) => l.codigo == 'IVSS').monto, 26);
+    expect(mes.aporteIvss, 71.50);
+    expect(quincena.lineas.firstWhere((l) => l.codigo == 'IVSS').cantidad, 3);
+    expect(quincena.lineas.firstWhere((l) => l.codigo == 'IVSS').monto, 15.60);
+    expect(quincena.aporteIvss, 42.90);
+  });
+
+  test('IVSS con tope no recorta si el salario está bajo el tope', () {
+    final motor = PayrollEngine({
+      'dias_mes': 30,
+      'ivss_empleado_pct': 0.04,
+      'ivss_patrono_pct': 0.11,
+      'ivss_tope_salarios_min': 5,
+      'salario_minimo_mensual': 130,
+    });
+    final r = motor.calcular(
+      salarioMensual: 600,
+      frecuencia: 'mensual',
+      ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 10, 1),
+      periodoFin: DateTime(2026, 10, 31),
+      conceptos: [
+        _concepto('SUELDO', 'ingreso'),
+        _concepto('IVSS', 'egreso', esSalarial: false),
+      ],
+      novedades: [],
+    );
+
+    expect(r.lineas.firstWhere((l) => l.codigo == 'IVSS').monto, 22.15);
+    expect(r.aporteIvss, 60.92);
   });
 }

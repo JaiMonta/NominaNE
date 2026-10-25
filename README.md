@@ -24,6 +24,7 @@ recibos de pago en USD y Bolívares (VES) a la tasa del BCV, y aportes patronale
    - `supabase/migrations/007_empleados_fecha_nacimiento_telefono.sql`
    - `supabase/migrations/008_departamentos.sql`
    - `supabase/migrations/009_ajustes_empresa_publica.sql`
+   - `supabase/migrations/010_ivss_tope_semanal.sql`
 3. En *Authentication → URL Configuration* agrega tu dominio (ej.
    `https://nomina-ne.web.app`) en **Site URL** y **Additional Redirect URLs**.
    Para pruebas, en *Authentication → Providers → Email* puedes desactivar la
@@ -50,11 +51,11 @@ alimentación) se pagan y suman al neto, pero no entran en la base de IVSS, RPE,
 FAOV ni prestaciones. En el recibo aparecen al final en la sección
 **Ingreso extra (no salarial)**.
 
-En este despliegue el IVSS se calcula sobre toda la base salarial
-(`ivss_tope_salarios_min = 0`, sin el tope de 5 salarios mínimos) y el aporte
-patronal está en 11% (riesgo máximo). Para volver al tope legal, cambia
-`ivss_tope_salarios_min` a 5. Desactivar el tope no corresponde al cálculo
-legal de 5 salarios mínimos.
+El IVSS se calcula con la retención semanal: salario mensual × 12 / 52 × 4% por
+cada lunes del período, con un tope mensual de 5 salarios mínimos
+(`ivss_tope_salarios_min = 5`, `salario_minimo_mensual` en Bs). El aporte
+patronal usa la misma base semanal y los mismos lunes, al 11% (riesgo máximo).
+Con `ivss_tope_salarios_min = 0` se desactiva el tope.
 
 ## Despliegue (Firebase Hosting)
 ```
@@ -64,7 +65,7 @@ firebase deploy --only hosting
 `firebase.json` sirve `build/web` con rewrite SPA.
 
 ## Validación rápida
-- [ ] Migraciones 001 a 009 aplicadas.
+- [ ] Migraciones 001 a 010 aplicadas.
 - [ ] Dominio de Firebase agregado en Supabase Auth.
 - [ ] Tasa BCV del día cargada en *Tasas*.
 - [ ] Nombre/RIF de la empresa en *Parámetros*.
