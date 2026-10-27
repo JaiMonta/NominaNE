@@ -47,7 +47,9 @@ recibos de pago en USD y Bolívares (VES) a la tasa del BCV, y aportes patronale
 
 En **Generar nómina** puedes elegir **Tipo de nómina: Contratados**. Los
 empleados con modalidad **Contratado** se excluyen de la nómina normal y se
-pagan en una nómina mensual solo con su sueldo, sin deducciones ni aportes.
+pagan en una nómina semanal, quincenal o mensual (la frecuencia del empleado),
+solo con su sueldo, sin deducciones ni aportes. El sueldo se prorratea según
+la frecuencia igual que en la nómina normal.
 
 Al **Aprobar** una nómina normal se eliminan las novedades **no recurrentes**
 de los empleados incluidos que se solapen con el período. Las novedades

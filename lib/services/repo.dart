@@ -183,7 +183,6 @@ class Repo {
     }
     final t = tasaBcv;
     final esContratado = modalidad == 'contratado';
-    final frec = esContratado ? 'mensual' : frecuencia;
     double bs(double usd) => usd * t;
 
     final params = await parametrosMapa();
@@ -192,7 +191,7 @@ class Repo {
     final porId = {for (final c in conceptos) c['id'] as String: c};
     final emps = (await empleados())
         .where((e) => e.activo && e.modalidad == modalidad)
-        .where((e) => esContratado || e.frecuenciaPago == frecuencia)
+        .where((e) => e.frecuenciaPago == frecuencia)
         .where((e) => !e.fechaIngreso.isAfter(fin))
         .where((e) => e.fechaEgreso == null || !e.fechaEgreso!.isBefore(inicio))
         .toList();
@@ -232,7 +231,7 @@ class Repo {
         .from('nominas')
         .insert({
           'nombre': nombre,
-          'frecuencia': frec,
+          'frecuencia': frecuencia,
           'modalidad_nomina': modalidad,
           'periodo_inicio': fecha(inicio),
           'periodo_fin': fecha(fin),
@@ -263,7 +262,7 @@ class Repo {
             }).toList();
       final r = motor.calcular(
         salarioMensual: bs(e.salarioMensualUsd),
-        frecuencia: frec,
+        frecuencia: frecuencia,
         ingreso: e.fechaIngreso,
         periodoInicio: inicio,
         periodoFin: fin,

@@ -56,7 +56,7 @@ class _NominasPageState extends State<NominasPage> {
                 for (final n in s.data!)
                   ListTile(
                     title: Text('${n.nombre} '
-                        '(${n.modalidad == 'contratado' ? 'Contratados' : n.frecuencia})'),
+                        '(${n.modalidad == 'contratado' ? 'Contratados · ${n.frecuencia}' : n.frecuencia})'),
                     subtitle: Text('${fecha(n.inicio)} a ${fecha(n.fin)} · '
                         'Ingresos ${money.format(n.totalIngresos)} · '
                         'Egresos ${money.format(n.totalEgresos)} · '
@@ -126,9 +126,9 @@ class _NuevaNominaState extends State<_NuevaNomina> {
       if (!mounted) return;
       if (n == 0) {
         setState(() {
-          _err = modalidad == 'contratado'
-              ? 'No hay empleados activos con modalidad Contratado'
-              : 'No hay empleados activos con esa frecuencia de pago';
+          _err = 'No hay empleados activos con modalidad '
+              '${modalidad == 'contratado' ? 'Contratado' : 'Normal'} '
+              'y frecuencia $frecuencia';
           _busy = false;
         });
       } else {
@@ -164,31 +164,26 @@ class _NuevaNominaState extends State<_NuevaNomina> {
               ],
               onChanged: (v) => setState(() {
                 modalidad = v ?? 'normal';
-                if (modalidad == 'contratado') {
-                  frecuencia = 'mensual';
-                  utilidades = 0;
-                }
+                if (modalidad == 'contratado') utilidades = 0;
               }),
             ),
-            if (modalidad == 'normal')
-              DropdownButtonFormField<String>(
-                value: frecuencia,
-                decoration: const InputDecoration(
-                    labelText: 'Frecuencia (Art. 150 LOT)'),
-                items: const [
-                  DropdownMenuItem(value: 'semanal', child: Text('semanal')),
-                  DropdownMenuItem(value: 'quincenal', child: Text('quincenal')),
-                  DropdownMenuItem(value: 'mensual', child: Text('mensual')),
-                ],
-                onChanged: (v) => setState(() => frecuencia = v!),
-              )
-            else
+            DropdownButtonFormField<String>(
+              value: frecuencia,
+              decoration: const InputDecoration(
+                  labelText: 'Frecuencia (Art. 150 LOT)'),
+              items: const [
+                DropdownMenuItem(value: 'semanal', child: Text('semanal')),
+                DropdownMenuItem(value: 'quincenal', child: Text('quincenal')),
+                DropdownMenuItem(value: 'mensual', child: Text('mensual')),
+              ],
+              onChanged: (v) => setState(() => frecuencia = v!),
+            ),
+            if (modalidad == 'contratado')
               const ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.event_repeat),
-                title: Text('Frecuencia: mensual'),
-                subtitle: Text(
-                    'Nómina de contratados: solo sueldo, sin deducciones.'),
+                leading: Icon(Icons.info_outline),
+                title: Text('Solo sueldo, sin deducciones'),
+                subtitle: Text('El sueldo se prorratea según la frecuencia.'),
               ),
             ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -563,7 +558,8 @@ class _NominaDetalleState extends State<_NominaDetalle> {
                   children: [
                     Text(
                         '${n.nombre} · ${fecha(n.inicio)} a ${fecha(n.fin)}'
-                        '${n.modalidad == 'contratado' ? ' · Contratados' : ''}',
+                        '${n.modalidad == 'contratado' ? ' · Contratados' : ''}'
+                        ' · ${n.frecuencia}',
                         style: Theme.of(context).textTheme.titleMedium),
                     Text(
                         'Aportes patronales — IVSS ${money.format(n.totalAporteIvss)} · RPE ${money.format(n.totalAporteRpe)} · FAOV ${money.format(n.totalAporteFaov)} · LOPCYMAT ${money.format(n.totalAporteLopcymat)}  (Total ${money.format(n.totalAportes)})',

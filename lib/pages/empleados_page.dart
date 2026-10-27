@@ -337,7 +337,6 @@ class _EmpleadoDialogState extends State<_EmpleadoDialog> {
   Future<void> _guardar() async {
     if (!_k.currentState!.validate()) return;
     try {
-      if (e.modalidad == 'contratado') e.frecuenciaPago = 'mensual';
       await Repo.guardarEmpleado(e);
       if (mounted) Navigator.pop(context, true);
     } catch (x) {
@@ -426,32 +425,22 @@ class _EmpleadoDialogState extends State<_EmpleadoDialog> {
                     DropdownMenuItem(
                         value: 'contratado', child: Text('Contratado')),
                   ],
-                  onChanged: (v) => setState(() {
-                    e.modalidad = v ?? 'normal';
-                    if (e.modalidad == 'contratado') {
-                      e.frecuenciaPago = 'mensual';
-                    }
-                  }),
+                  onChanged: (v) =>
+                      setState(() => e.modalidad = v ?? 'normal'),
                 ),
                 if (e.modalidad == 'contratado')
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
-                        'Contratado: nómina mensual, solo sueldo, sin deducciones.',
+                        'Contratado: solo sueldo, sin deducciones. '
+                        'Puede pagarse semanal, quincenal o mensual.',
                         style: Theme.of(context).textTheme.bodySmall),
                   ),
                 _dd('Jornada', e.jornada, ['diurna', 'nocturna', 'mixta'],
                     (v) => setState(() => e.jornada = v)),
-                if (e.modalidad == 'normal')
-                  _dd('Frecuencia de pago', e.frecuenciaPago,
-                      ['semanal', 'quincenal', 'mensual'],
-                      (v) => setState(() => e.frecuenciaPago = v))
-                else
-                  const ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('Frecuencia: mensual'),
-                    subtitle: Text('La nómina de contratados es mensual.'),
-                  ),
+                _dd('Frecuencia de pago', e.frecuenciaPago,
+                    ['semanal', 'quincenal', 'mensual'],
+                    (v) => setState(() => e.frecuenciaPago = v)),
                 _t('Salario mensual (USD)', e.salarioMensualUsd == 0 ? '' : '${e.salarioMensualUsd}',
                     (v) => e.salarioMensualUsd = double.tryParse(v.replaceAll(',', '.')) ?? 0,
                     req: true, kt: TextInputType.number),
