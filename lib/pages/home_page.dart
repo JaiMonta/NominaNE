@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme.dart';
 import '../services/repo.dart';
+import 'asistencia_page.dart';
 import 'conceptos_page.dart';
 import 'departamentos_page.dart';
 import 'empleados_page.dart';
@@ -34,6 +35,7 @@ class _HomePageState extends State<HomePage> {
     final destinos = <(IconData, String)>[
       (Icons.people, 'Empleados'),
       (Icons.account_tree, 'Departamentos'),
+      (Icons.qr_code_scanner, 'Asistencia'),
       (Icons.list_alt, 'Conceptos'),
       (Icons.edit_note, 'Novedades'),
       (Icons.payments, 'Nóminas'),
@@ -43,6 +45,7 @@ class _HomePageState extends State<HomePage> {
     final paginas = <Widget>[
       EmpleadosPage(puedeEditar: puedeEditar),
       DepartamentosPage(puedeEditar: puedeEditar),
+      AsistenciaPage(puedeEditar: puedeEditar),
       ConceptosPage(puedeEditar: puedeEditar),
       NovedadesPage(puedeEditar: puedeEditar),
       NominasPage(puedeEditar: puedeEditar),

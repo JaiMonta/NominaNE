@@ -27,6 +27,7 @@ recibos de pago en USD y Bolívares (VES) a la tasa del BCV, y aportes patronale
    - `supabase/migrations/010_ivss_tope_semanal.sql`
    - `supabase/migrations/011_modalidad_nomina.sql`
    - `supabase/migrations/012_aprobar_nomina_limpia_novedades.sql`
+   - `supabase/migrations/013_asistencia_qr.sql`
 3. En *Authentication → URL Configuration* agrega tu dominio (ej.
    `https://nomina-ne.web.app`) en **Site URL** y **Additional Redirect URLs**.
    Para pruebas, en *Authentication → Providers → Email* puedes desactivar la
@@ -69,6 +70,24 @@ cada lunes del período, con un tope mensual de 5 salarios mínimos
 patronal usa la misma base semanal y los mismos lunes, al 11% (riesgo máximo).
 Con `ivss_tope_salarios_min = 0` se desactiva el tope.
 
+## Asistencia
+La pestaña **Asistencia** tiene dos vistas:
+
+- **Día**: RRHH genera o muestra el **QR del día**, asigna un **PIN de 4 a 6
+  dígitos** a cada empleado y puede registrar entradas/salidas manualmente.
+- **Mes**: resumen de días y horas por empleado, con exportación a PDF.
+
+El empleado escanea el QR con la cámara de su teléfono; se abre una página
+pública (sin login) donde ingresa **cédula + PIN** y marca **Entrada** o
+**Salida**. La hora la registra el servidor en zona `America/Caracas`. El QR
+vence al final del día y puede regenerarse; el anterior queda inválido.
+
+Seguridad: el QR diario por sí solo no prueba presencia física (puede
+compartirse). El PIN protege la identidad, se guarda con hash y se bloquea
+tras 5 intentos fallidos. Para control de presencia estricto se recomienda un
+kiosco en la entrada con el empleado marcando allí; el registro manual de RRHH
+queda siempre como respaldo.
+
 ## Despliegue (Firebase Hosting)
 ```
 flutter build web --release
@@ -77,12 +96,14 @@ firebase deploy --only hosting
 `firebase.json` sirve `build/web` con rewrite SPA.
 
 ## Validación rápida
-- [ ] Migraciones 001 a 012 aplicadas.
+- [ ] Migraciones 001 a 013 aplicadas.
 - [ ] Dominio de Firebase agregado en Supabase Auth.
 - [ ] Tasa BCV del día cargada en *Tasas*.
 - [ ] Nombre/RIF de la empresa en *Parámetros*.
 - [ ] Generar nómina y verificar neto en Bs y US$.
 - [ ] Descargar PDF de recibo y de nómina.
+- [ ] Asignar PIN de asistencia y probar el QR con un teléfono.
+- [ ] Verificar el resumen mensual y su PDF.
 
 ## Aviso legal
 La LOT adjunta (1997) fue reemplazada por la LOTTT (2012); los porcentajes de

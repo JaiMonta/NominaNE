@@ -194,6 +194,61 @@ class Nomina {
         tasaBcv = j['tasa_bcv'] == null ? null : _d(j['tasa_bcv']);
 }
 
+class QrAsistencia {
+  final String token;
+  final DateTime fecha;
+
+  QrAsistencia({required this.token, required this.fecha});
+
+  factory QrAsistencia.fromJson(Map<String, dynamic> j) => QrAsistencia(
+        token: j['token'],
+        fecha: DateTime.parse(j['fecha']),
+      );
+}
+
+class AsistenciaDia {
+  final String? id;
+  final String empleadoId;
+  final DateTime fecha;
+  final DateTime? entrada, salida;
+  final String? metodoEntrada, metodoSalida, nota;
+
+  AsistenciaDia({
+    this.id,
+    required this.empleadoId,
+    required this.fecha,
+    this.entrada,
+    this.salida,
+    this.metodoEntrada,
+    this.metodoSalida,
+    this.nota,
+  });
+
+  factory AsistenciaDia.fromJson(Map<String, dynamic> j) => AsistenciaDia(
+        id: j['id'],
+        empleadoId: j['empleado_id'],
+        fecha: DateTime.parse(j['fecha']),
+        entrada: j['entrada'] == null
+            ? null
+            : DateTime.parse(j['entrada']).toLocal(),
+        salida:
+            j['salida'] == null ? null : DateTime.parse(j['salida']).toLocal(),
+        metodoEntrada: j['metodo_entrada'],
+        metodoSalida: j['metodo_salida'],
+        nota: j['nota'],
+      );
+
+  bool get pendiente => entrada != null && salida == null;
+
+  double get horas {
+    final e = entrada;
+    final s = salida;
+    if (e == null || s == null) return 0;
+    final minutos = s.difference(e).inMinutes;
+    return minutos > 0 ? minutos / 60 : 0;
+  }
+}
+
 class Recibo {
   final String id;
   final String empleadoId;
