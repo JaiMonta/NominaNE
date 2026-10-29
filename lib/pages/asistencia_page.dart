@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/asistencia_horarios.dart';
 import '../core/asistencia_periodo.dart';
 import '../core/responsive.dart';
 import '../core/theme.dart';
@@ -79,10 +80,12 @@ class _DiaTab extends StatefulWidget {
 class _DiaTabState extends State<_DiaTab> {
   DateTime _fecha = DateTime.now();
   late Future<_DatosDia> _f = _cargar();
+  bool _imprimiendoQr = false;
 
   Future<_DatosDia> _cargar() async {
     final empleados = await Repo.empleados();
     final asistencias = await AsistenciaService.asistenciasDelDia(_fecha);
+    final horarios = await AsistenciaService.horarios();
     final pines = widget.puedeEditar
         ? await AsistenciaService.pinesAsignados()
         : <String>{};
@@ -101,6 +104,7 @@ class _DiaTabState extends State<_DiaTab> {
       empleados: empleados,
       asistencias: {for (final a in asistencias) a.empleadoId: a},
       pines: pines,
+      horarios: horarios,
       qr: qr,
       qrError: qrError,
     );
@@ -154,6 +158,24 @@ class _DiaTabState extends State<_DiaTab> {
     _snack('Enlace copiado.');
   }
 
+  Future<void> _imprimirQr(QrAsistencia qr, String url) async {
+    if (_imprimiendoQr) return;
+    setState(() => _imprimiendoQr = true);
+    try {
+      final empresa = await Repo.ajuste('empresa_nombre');
+      await imprimirQrAsistencia(
+        empresa: empresa.trim().isEmpty ? 'Nómina' : empresa.trim(),
+        fecha: qr.fecha,
+        url: url,
+      );
+    } catch (x) {
+      _snack('No se pudo generar el QR para imprimir: ${_errorTexto(x)}',
+          error: true);
+    } finally {
+      if (mounted) setState(() => _imprimiendoQr = false);
+    }
+  }
+
   Future<void> _regenerar() async {
     final ok = await showDialog<bool>(
       context: context,
@@ -193,9 +215,7 @@ class _DiaTabState extends State<_DiaTab> {
     try {
       await AsistenciaService.registrarManual(
         empleadoId: e.id!,
-        fecha: tipo == 'entrada'
-            ? DateTime(hora.year, hora.month, hora.day)
-            : _fecha,
+        fecha: _fecha,
         tipo: tipo,
         hora: hora,
       );
@@ -483,6 +503,18 @@ class _DiaTabState extends State<_DiaTab> {
               icon: const Icon(Icons.autorenew),
               label: const Text('Regenerar'),
             ),
+            FilledButton.icon(
+              onPressed:
+                  _imprimiendoQr ? null : () => _imprimirQr(qr, url),
+              icon: _imprimiendoQr
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.print),
+              label: const Text('Imprimir QR'),
+            ),
           ]),
         ]),
       ),
@@ -499,11 +531,25 @@ class _DiaTabState extends State<_DiaTab> {
     final sinRegistro =
         activos.where((e) => d.asistencias[e.id] == null).length;
 
+    var retardos = 0;
+    for (final e in activos) {
+      final a = d.asistencias[e.id];
+      if (a?.entrada == null) continue;
+      final r = calcularRetardo(
+        fecha: a!.fecha,
+        entrada: a.entrada,
+        horario: d.horarios.para(a.jornada ?? e.jornada),
+        toleranciaMin: d.horarios.toleranciaMin,
+      );
+      retardos += r.retardos;
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Wrap(spacing: 8, runSpacing: 8, children: [
         _stat(context, 'Presentes', '$presentes', Paleta.ingreso),
         _stat(context, 'Sin salida', '$pendientes', Colors.orange),
+        _stat(context, 'Retardos', '$retardos', Colors.orange),
         _stat(context, 'Sin registro', '$sinRegistro',
             Theme.of(context).colorScheme.outline),
       ]),
@@ -520,6 +566,12 @@ class _DiaTabState extends State<_DiaTab> {
         ? scheme.outline
         : (a.pendiente ? Colors.orange : Paleta.ingreso);
     final tienePin = d.pines.contains(e.id);
+    final retardo = calcularRetardo(
+      fecha: a?.fecha ?? _fecha,
+      entrada: a?.entrada,
+      horario: d.horarios.para(a?.jornada ?? e.jornada),
+      toleranciaMin: d.horarios.toleranciaMin,
+    );
 
     return Card(
       child: Padding(
@@ -560,6 +612,12 @@ class _DiaTabState extends State<_DiaTab> {
             'Salida: ${_horaTexto(a?.salida)}   ·   '
             'Horas: ${_horasTexto(a)}',
           ),
+          if (retardo.retardos > 0)
+            Text(
+              'Retardo: ${retardo.minutos} min',
+              style: const TextStyle(
+                  color: Colors.orange, fontWeight: FontWeight.w600),
+            ),
           if (a?.nota != null && a!.nota!.trim().isNotEmpty)
             Text('Nota: ${a.nota}',
                 style: Theme.of(context).textTheme.bodySmall),
@@ -596,6 +654,7 @@ class _DatosDia {
   final List<Empleado> empleados;
   final Map<String, AsistenciaDia> asistencias;
   final Set<String> pines;
+  final HorariosAsistencia horarios;
   final QrAsistencia? qr;
   final String? qrError;
 
@@ -603,6 +662,7 @@ class _DatosDia {
     required this.empleados,
     required this.asistencias,
     required this.pines,
+    required this.horarios,
     required this.qr,
     required this.qrError,
   });
@@ -650,11 +710,13 @@ class _ReporteTabState extends State<_ReporteTab> {
     final empleados = await Repo.empleados();
     final asistencias =
         await AsistenciaService.asistenciasEntre(r.inicio, r.fin);
+    final horarios = await AsistenciaService.horarios();
     final empresa = await Repo.ajuste('empresa_nombre');
     return _DatosReporte(
       empleados: empleados,
       asistencias: asistencias,
       empresa: empresa,
+      horarios: horarios,
       inicio: r.inicio,
       fin: r.fin,
       titulo: _etiqueta(r),
@@ -724,6 +786,18 @@ class _ReporteTabState extends State<_ReporteTab> {
       final dias = registros.where((a) => a.entrada != null).length;
       final horas = registros.fold<double>(0, (s, a) => s + a.horas);
       final pendientes = registros.where((a) => a.pendiente).length;
+      var retardos = 0;
+      var minutosRetardo = 0;
+      for (final a in registros) {
+        final r = calcularRetardo(
+          fecha: a.fecha,
+          entrada: a.entrada,
+          horario: d.horarios.para(a.jornada ?? e.jornada),
+          toleranciaMin: d.horarios.toleranciaMin,
+        );
+        retardos += r.retardos;
+        minutosRetardo += r.minutos;
+      }
       filas.add(ResumenAsistencia(
         empleado: e.nombreCompleto,
         cedula: e.cedula,
@@ -731,6 +805,8 @@ class _ReporteTabState extends State<_ReporteTab> {
         dias: dias,
         horas: horas,
         pendientes: pendientes,
+        retardos: retardos,
+        minutosRetardo: minutosRetardo,
       ));
     }
     return filas;
@@ -771,6 +847,9 @@ class _ReporteTabState extends State<_ReporteTab> {
         final total = filas.fold<double>(0, (s, f) => s + f.horas);
         final conRegistro = filas.where((f) => f.dias > 0).length;
         final pendientes = filas.fold<int>(0, (s, f) => s + f.pendientes);
+        final totalRetardos = filas.fold<int>(0, (s, f) => s + f.retardos);
+        final totalMinutos =
+            filas.fold<int>(0, (s, f) => s + f.minutosRetardo);
 
         return RefreshIndicator(
           onRefresh: () async => _reload(),
@@ -824,6 +903,8 @@ class _ReporteTabState extends State<_ReporteTab> {
                 _stat(context, 'Horas del período', total.toStringAsFixed(2),
                     Theme.of(context).colorScheme.primary),
                 _stat(context, 'Con registro', '$conRegistro', Paleta.ingreso),
+                _stat(context, 'Retardos', '$totalRetardos', Colors.orange),
+                _stat(context, 'Min. retardo', '$totalMinutos', Colors.orange),
                 _stat(context, 'Salidas pendientes', '$pendientes',
                     Colors.orange),
               ]),
@@ -836,20 +917,27 @@ class _ReporteTabState extends State<_ReporteTab> {
               for (final f in filas)
                 Card(
                   child: ListTile(
+                    isThreeLine: true,
                     title: Text(f.empleado),
-                    subtitle: Text('${f.cedula} · ${f.departamento}'),
+                    subtitle: Text(
+                        '${f.cedula} · ${f.departamento}\n'
+                        '${f.dias} días · ${f.horas.toStringAsFixed(2)} h · '
+                        '${f.pendientes} pend.'),
                     trailing: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text('${f.dias} días',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
-                        Text('${f.horas.toStringAsFixed(2)} h',
-                            style: Theme.of(context).textTheme.bodySmall),
-                        if (f.pendientes > 0)
-                          Text('${f.pendientes} pend.',
-                              style: const TextStyle(color: Colors.orange)),
+                        Text('${f.retardos}',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: f.retardos > 0
+                                    ? Colors.orange
+                                    : null)),
+                        const Text('ret.',
+                            style: TextStyle(fontSize: 11)),
+                        if (f.minutosRetardo > 0)
+                          Text('${f.minutosRetardo} min',
+                              style: Theme.of(context).textTheme.bodySmall),
                       ],
                     ),
                   ),
@@ -867,6 +955,7 @@ class _DatosReporte {
   final List<Empleado> empleados;
   final List<AsistenciaDia> asistencias;
   final String empresa;
+  final HorariosAsistencia horarios;
   final DateTime inicio, fin;
   final String titulo;
 
@@ -874,6 +963,7 @@ class _DatosReporte {
     required this.empleados,
     required this.asistencias,
     required this.empresa,
+    required this.horarios,
     required this.inicio,
     required this.fin,
     required this.titulo,

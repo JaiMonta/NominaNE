@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/asistencia_horarios.dart';
 import '../models/models.dart';
 
 class AsistenciaService {
@@ -62,6 +63,15 @@ class AsistenciaService {
         .map<AsistenciaDia>(
             (j) => AsistenciaDia.fromJson(Map<String, dynamic>.from(j)))
         .toList();
+  }
+
+  static Future<HorariosAsistencia> horarios() async {
+    final rows = await _db
+        .from('ajustes')
+        .select('clave, valor')
+        .like('clave', 'asistencia_%');
+    return HorariosAsistencia.fromAjustes(
+        rows.map<Map<String, dynamic>>((j) => Map<String, dynamic>.from(j)).toList());
   }
 
   static Future<Set<String>> pinesAsignados() async {

@@ -211,7 +211,7 @@ class AsistenciaDia {
   final String empleadoId;
   final DateTime fecha;
   final DateTime? entrada, salida;
-  final String? metodoEntrada, metodoSalida, nota;
+  final String? metodoEntrada, metodoSalida, nota, jornada;
 
   AsistenciaDia({
     this.id,
@@ -222,6 +222,7 @@ class AsistenciaDia {
     this.metodoEntrada,
     this.metodoSalida,
     this.nota,
+    this.jornada,
   });
 
   factory AsistenciaDia.fromJson(Map<String, dynamic> j) => AsistenciaDia(
@@ -236,6 +237,7 @@ class AsistenciaDia {
         metodoEntrada: j['metodo_entrada'],
         metodoSalida: j['metodo_salida'],
         nota: j['nota'],
+        jornada: j['jornada'],
       );
 
   bool get pendiente => entrada != null && salida == null;

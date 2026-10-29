@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nomina_app/core/asistencia_horarios.dart';
 import 'package:nomina_app/core/asistencia_periodo.dart';
 import 'package:nomina_app/core/asistencia_url.dart';
 import 'package:nomina_app/models/models.dart';
@@ -32,9 +33,11 @@ void main() {
       'fecha': '2026-10-28',
       'entrada': '2026-10-28T11:00:00+00:00',
       'salida': '2026-10-28T20:30:00+00:00',
+      'jornada': 'nocturna',
     });
     expect(a.horas, closeTo(9.5, 0.001));
     expect(a.pendiente, isFalse);
+    expect(a.jornada, 'nocturna');
 
     final b = AsistenciaDia.fromJson({
       'id': 'a2',
@@ -92,5 +95,85 @@ void main() {
         TipoPeriodoAsistencia.mensual, DateTime(2028, 2, 10));
     expect(febrero.inicio, DateTime(2028, 2, 1));
     expect(febrero.fin, DateTime(2028, 2, 29));
+  });
+
+  test('horarios desde ajustes usan defaults y configuración', () {
+    final h = HorariosAsistencia.fromAjustes([
+      {'clave': 'asistencia_diurna_entrada', 'valor': '08:00'},
+      {'clave': 'asistencia_diurna_salida', 'valor': '17:00'},
+      {'clave': 'asistencia_tolerancia_min', 'valor': '10'},
+    ]);
+
+    expect(h.para('diurna')!.entradaMin, 8 * 60);
+    expect(h.para('diurna')!.salidaMin, 17 * 60);
+    expect(h.toleranciaMin, 10);
+    expect(h.para('nocturna')!.entradaMin, 22 * 60);
+    expect(h.para('nocturna')!.salidaMin, 6 * 60);
+    expect(h.para('mixta')!.entradaMin, 10 * 60);
+    expect(h.para('mixta')!.salidaMin, 19 * 60);
+  });
+
+  test('retardo diurno respeta la tolerancia de 5 minutos', () {
+    final h = HorariosAsistencia.fromAjustes([]);
+    final horario = h.para('diurna');
+    final fecha = DateTime(2026, 10, 28);
+
+    final enTolerancia = calcularRetardo(
+      fecha: fecha,
+      entrada: DateTime(2026, 10, 28, 7, 5),
+      horario: horario,
+      toleranciaMin: h.toleranciaMin,
+    );
+    expect(enTolerancia.retardos, 0);
+
+    final tarde = calcularRetardo(
+      fecha: fecha,
+      entrada: DateTime(2026, 10, 28, 7, 6),
+      horario: horario,
+      toleranciaMin: h.toleranciaMin,
+    );
+    expect(tarde.retardos, 1);
+    expect(tarde.minutos, 6);
+
+    final temprano = calcularRetardo(
+      fecha: fecha,
+      entrada: DateTime(2026, 10, 28, 6, 55),
+      horario: horario,
+      toleranciaMin: h.toleranciaMin,
+    );
+    expect(temprano.retardos, 0);
+  });
+
+  test('retardo nocturno se mide desde el día de inicio del turno', () {
+    final h = HorariosAsistencia.fromAjustes([]);
+    final r = calcularRetardo(
+      fecha: DateTime(2026, 10, 28),
+      entrada: DateTime(2026, 10, 29, 2, 0),
+      horario: h.para('nocturna'),
+      toleranciaMin: h.toleranciaMin,
+    );
+    expect(r.retardos, 1);
+    expect(r.minutos, 240);
+  });
+
+  test('retardo mixto y sin entrada', () {
+    final h = HorariosAsistencia.fromAjustes([]);
+    final r = calcularRetardo(
+      fecha: DateTime(2026, 10, 28),
+      entrada: DateTime(2026, 10, 28, 10, 20),
+      horario: h.para('mixta'),
+      toleranciaMin: h.toleranciaMin,
+    );
+    expect(r.retardos, 1);
+    expect(r.minutos, 20);
+
+    final sinEntrada = calcularRetardo(
+      fecha: DateTime(2026, 10, 28),
+      entrada: null,
+      horario: h.para('mixta'),
+      toleranciaMin: h.toleranciaMin,
+    );
+    expect(sinEntrada.retardos, 0);
+    expect(sinEntrada.minutos, 0);
   });
 }

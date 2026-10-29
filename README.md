@@ -28,6 +28,7 @@ recibos de pago en USD y Bolívares (VES) a la tasa del BCV, y aportes patronale
    - `supabase/migrations/011_modalidad_nomina.sql`
    - `supabase/migrations/012_aprobar_nomina_limpia_novedades.sql`
    - `supabase/migrations/013_asistencia_qr.sql`
+   - `supabase/migrations/014_asistencia_horarios.sql`
 3. En *Authentication → URL Configuration* agrega tu dominio (ej.
    `https://nomina-ne.web.app`) en **Site URL** y **Additional Redirect URLs**.
    Para pruebas, en *Authentication → Providers → Email* puedes desactivar la
@@ -73,15 +74,23 @@ Con `ivss_tope_salarios_min = 0` se desactiva el tope.
 ## Asistencia
 La pestaña **Asistencia** tiene dos vistas:
 
-- **Día**: RRHH genera o muestra el **QR del día**, asigna un **PIN de 4 a 6
-  dígitos** a cada empleado y puede registrar entradas/salidas manualmente.
-- **Reporte**: resumen de días y horas por empleado en período **semanal,
-  quincenal o mensual**, con navegación y exportación a PDF.
+- **Día**: RRHH genera o muestra el **QR del día**, lo puede **imprimir** en
+  PDF A4, asigna un **PIN de 4 a 6 dígitos** a cada empleado y puede registrar
+  entradas/salidas manualmente.
+- **Reporte**: resumen de días, horas y **retardos** por empleado en período
+  **semanal, quincenal o mensual**, con navegación y exportación a PDF.
 
 El empleado escanea el QR con la cámara de su teléfono; se abre una página
 pública (sin login) donde ingresa **cédula + PIN** y marca **Entrada** o
 **Salida**. La hora la registra el servidor en zona `America/Caracas`. El QR
 vence al final del día y puede regenerarse; el anterior queda inválido.
+
+Los horarios y la tolerancia se configuran en **Parámetros → Asistencia**:
+diurna 07:00–16:00, nocturna 22:00–06:00, mixta 10:00–19:00 y tolerancia de
+5 minutos por defecto. El reporte cuenta un retardo cuando la entrada supera
+la hora de entrada de la jornada del empleado más la tolerancia; también suma
+los minutos de retardo. En turnos nocturnos, la entrada se asocia al día de
+inicio del turno, incluso si se marca después de medianoche.
 
 Seguridad: el QR diario por sí solo no prueba presencia física (puede
 compartirse). El PIN protege la identidad, se guarda con hash y se bloquea
@@ -97,7 +106,7 @@ firebase deploy --only hosting
 `firebase.json` sirve `build/web` con rewrite SPA.
 
 ## Validación rápida
-- [ ] Migraciones 001 a 013 aplicadas.
+- [ ] Migraciones 001 a 014 aplicadas.
 - [ ] Dominio de Firebase agregado en Supabase Auth.
 - [ ] Tasa BCV del día cargada en *Tasas*.
 - [ ] Nombre/RIF de la empresa en *Parámetros*.
