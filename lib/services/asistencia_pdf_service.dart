@@ -21,14 +21,18 @@ class ResumenAsistencia {
   });
 }
 
-Future<void> emitirAsistenciaMes({
+Future<void> emitirAsistenciaPeriodo({
   required String empresa,
-  required DateTime mes,
+  required String titulo,
+  required DateTime inicio,
+  required DateTime fin,
   required List<ResumenAsistencia> filas,
+  required String nombreArchivo,
 }) async {
   final doc = pw.Document();
   final totalHoras = filas.fold<double>(0, (s, f) => s + f.horas);
-  final mesTexto = DateFormat('MMMM yyyy', 'es').format(mes);
+  final subtitulo =
+      'Del ${DateFormat('dd/MM/yyyy').format(inicio)} al ${DateFormat('dd/MM/yyyy').format(fin)}';
 
   doc.addPage(pw.MultiPage(
     pageFormat: PdfPageFormat.a4,
@@ -40,7 +44,8 @@ Future<void> emitirAsistenciaMes({
             fontSize: 16, fontWeight: pw.FontWeight.bold),
       ),
       pw.SizedBox(height: 4),
-      pw.Text('Control de asistencia · $mesTexto'),
+      pw.Text('Control de asistencia · $titulo'),
+      pw.Text(subtitulo, style: const pw.TextStyle(fontSize: 9)),
       pw.SizedBox(height: 14),
       pw.TableHelper.fromTextArray(
         headers: const [
@@ -85,6 +90,6 @@ Future<void> emitirAsistenciaMes({
 
   await Printing.sharePdf(
     bytes: await doc.save(),
-    filename: 'asistencia_${DateFormat('yyyy_MM').format(mes)}.pdf',
+    filename: nombreArchivo,
   );
 }

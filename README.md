@@ -75,7 +75,8 @@ La pestaña **Asistencia** tiene dos vistas:
 
 - **Día**: RRHH genera o muestra el **QR del día**, asigna un **PIN de 4 a 6
   dígitos** a cada empleado y puede registrar entradas/salidas manualmente.
-- **Mes**: resumen de días y horas por empleado, con exportación a PDF.
+- **Reporte**: resumen de días y horas por empleado en período **semanal,
+  quincenal o mensual**, con navegación y exportación a PDF.
 
 El empleado escanea el QR con la cámara de su teléfono; se abre una página
 pública (sin login) donde ingresa **cédula + PIN** y marca **Entrada** o
@@ -103,7 +104,7 @@ firebase deploy --only hosting
 - [ ] Generar nómina y verificar neto en Bs y US$.
 - [ ] Descargar PDF de recibo y de nómina.
 - [ ] Asignar PIN de asistencia y probar el QR con un teléfono.
-- [ ] Verificar el resumen mensual y su PDF.
+- [ ] Verificar los reportes semanal, quincenal y mensual, y su PDF.
 
 ## Aviso legal
 La LOT adjunta (1997) fue reemplazada por la LOTTT (2012); los porcentajes de

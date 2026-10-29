@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/asistencia_periodo.dart';
 import '../core/responsive.dart';
 import '../core/theme.dart';
 import '../models/models.dart';
@@ -55,11 +56,11 @@ class AsistenciaPage extends StatelessWidget {
   Widget build(BuildContext context) => DefaultTabController(
         length: 2,
         child: Column(children: [
-          const TabBar(tabs: [Tab(text: 'Día'), Tab(text: 'Mes')]),
+          const TabBar(tabs: [Tab(text: 'Día'), Tab(text: 'Reporte')]),
           Expanded(
             child: TabBarView(children: [
               _DiaTab(puedeEditar: puedeEditar),
-              const _MesTab(),
+              const _ReporteTab(),
             ]),
           ),
         ]),
@@ -607,49 +608,107 @@ class _DatosDia {
   });
 }
 
-class _MesTab extends StatefulWidget {
-  const _MesTab();
+class _ReporteTab extends StatefulWidget {
+  const _ReporteTab();
 
   @override
-  State<_MesTab> createState() => _MesTabState();
+  State<_ReporteTab> createState() => _ReporteTabState();
 }
 
-class _MesTabState extends State<_MesTab> {
-  DateTime _mes = DateTime(DateTime.now().year, DateTime.now().month);
-  late Future<_DatosMes> _f = _cargar();
+class _ReporteTabState extends State<_ReporteTab> {
+  TipoPeriodoAsistencia _tipo = TipoPeriodoAsistencia.mensual;
+  DateTime _referencia = DateTime.now();
+  late Future<_DatosReporte> _f = _cargar();
 
-  Future<_DatosMes> _cargar() async {
+  RangoAsistencia get _rango => rangoAsistencia(_tipo, _referencia);
+
+  String _etiqueta(RangoAsistencia r) {
+    switch (_tipo) {
+      case TipoPeriodoAsistencia.semanal:
+        return 'Semana ${_fechaTexto(r.inicio)} al ${_fechaTexto(r.fin)}';
+      case TipoPeriodoAsistencia.quincenal:
+        return 'Quincena ${_fechaTexto(r.inicio)} al ${_fechaTexto(r.fin)}';
+      case TipoPeriodoAsistencia.mensual:
+        final texto = DateFormat('MMMM yyyy', 'es').format(r.inicio);
+        return '${texto[0].toUpperCase()}${texto.substring(1)}';
+    }
+  }
+
+  String _nombreTipo(TipoPeriodoAsistencia t) {
+    switch (t) {
+      case TipoPeriodoAsistencia.semanal:
+        return 'Semanal';
+      case TipoPeriodoAsistencia.quincenal:
+        return 'Quincenal';
+      case TipoPeriodoAsistencia.mensual:
+        return 'Mensual';
+    }
+  }
+
+  Future<_DatosReporte> _cargar() async {
+    final r = _rango;
     final empleados = await Repo.empleados();
-    final inicio = DateTime(_mes.year, _mes.month, 1);
-    final fin = DateTime(_mes.year, _mes.month + 1, 0);
     final asistencias =
-        await AsistenciaService.asistenciasEntre(inicio, fin);
+        await AsistenciaService.asistenciasEntre(r.inicio, r.fin);
     final empresa = await Repo.ajuste('empresa_nombre');
-    return _DatosMes(
+    return _DatosReporte(
       empleados: empleados,
       asistencias: asistencias,
       empresa: empresa,
+      inicio: r.inicio,
+      fin: r.fin,
+      titulo: _etiqueta(r),
     );
   }
 
   void _reload() => setState(() => _f = _cargar());
 
-  Future<void> _pickMes() async {
+  void _cambiarTipo(TipoPeriodoAsistencia t) {
+    setState(() {
+      _tipo = t;
+      _f = _cargar();
+    });
+  }
+
+  void _anterior() {
+    final actual = _rango;
+    setState(() {
+      _referencia = actual.inicio.subtract(const Duration(days: 1));
+      _f = _cargar();
+    });
+  }
+
+  void _siguiente() {
+    final actual = _rango;
+    setState(() {
+      _referencia = actual.fin.add(const Duration(days: 1));
+      _f = _cargar();
+    });
+  }
+
+  void _hoy() {
+    setState(() {
+      _referencia = DateTime.now();
+      _f = _cargar();
+    });
+  }
+
+  Future<void> _elegirFecha() async {
     final d = await showDatePicker(
       context: context,
-      initialDate: _mes,
+      initialDate: _referencia,
       firstDate: DateTime(2025),
-      lastDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
     );
     if (d != null) {
       setState(() {
-        _mes = DateTime(d.year, d.month);
+        _referencia = d;
         _f = _cargar();
       });
     }
   }
 
-  List<ResumenAsistencia> _filas(_DatosMes d) {
+  List<ResumenAsistencia> _filas(_DatosReporte d) {
     final empleados = d.empleados
         .where((e) =>
             e.activo || d.asistencias.any((a) => a.empleadoId == e.id))
@@ -677,12 +736,17 @@ class _MesTabState extends State<_MesTab> {
     return filas;
   }
 
-  Future<void> _exportar(_DatosMes d, List<ResumenAsistencia> filas) async {
+  Future<void> _exportar(
+      _DatosReporte d, List<ResumenAsistencia> filas) async {
     try {
-      await emitirAsistenciaMes(
+      await emitirAsistenciaPeriodo(
         empresa: d.empresa.trim().isEmpty ? 'Nómina' : d.empresa.trim(),
-        mes: _mes,
+        titulo: d.titulo,
+        inicio: d.inicio,
+        fin: d.fin,
         filas: filas,
+        nombreArchivo:
+            'asistencia_${_tipo.name}_${AsistenciaService.fechaStr(d.inicio)}.pdf',
       );
     } catch (x) {
       if (mounted) {
@@ -695,7 +759,7 @@ class _MesTabState extends State<_MesTab> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<_DatosMes>(
+    return FutureBuilder<_DatosReporte>(
       future: _f,
       builder: (context, s) {
         if (s.hasError) return Center(child: Text('Error: ${s.error}'));
@@ -713,25 +777,51 @@ class _MesTabState extends State<_MesTab> {
           child: ListView(
             padding: const EdgeInsets.all(12),
             children: [
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final t in TipoPeriodoAsistencia.values)
+                  ChoiceChip(
+                    label: Text(_nombreTipo(t)),
+                    selected: _tipo == t,
+                    onSelected: (_) => _cambiarTipo(t),
+                  ),
+              ]),
+              const SizedBox(height: 8),
               Row(children: [
+                IconButton(
+                  tooltip: 'Período anterior',
+                  onPressed: _anterior,
+                  icon: const Icon(Icons.chevron_left),
+                ),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _pickMes,
+                    onPressed: _elegirFecha,
                     icon: const Icon(Icons.calendar_month),
-                    label: Text(
-                        DateFormat('MMMM yyyy', 'es').format(_mes)),
+                    label: Text(d.titulo, textAlign: TextAlign.center),
                   ),
                 ),
-                const SizedBox(width: 8),
-                FilledButton.icon(
-                  onPressed: () => _exportar(d, filas),
-                  icon: const Icon(Icons.picture_as_pdf),
-                  label: const Text('PDF'),
+                IconButton(
+                  tooltip: 'Período siguiente',
+                  onPressed: _siguiente,
+                  icon: const Icon(Icons.chevron_right),
+                ),
+                IconButton(
+                  tooltip: 'Período actual',
+                  onPressed: _hoy,
+                  icon: const Icon(Icons.today),
                 ),
               ]),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.icon(
+                  onPressed: () => _exportar(d, filas),
+                  icon: const Icon(Icons.picture_as_pdf),
+                  label: const Text('Exportar PDF'),
+                ),
+              ),
               const SizedBox(height: 10),
               Wrap(spacing: 8, runSpacing: 8, children: [
-                _stat(context, 'Horas del mes', total.toStringAsFixed(2),
+                _stat(context, 'Horas del período', total.toStringAsFixed(2),
                     Theme.of(context).colorScheme.primary),
                 _stat(context, 'Con registro', '$conRegistro', Paleta.ingreso),
                 _stat(context, 'Salidas pendientes', '$pendientes',
@@ -741,7 +831,7 @@ class _MesTabState extends State<_MesTab> {
               if (filas.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(24),
-                  child: Center(child: Text('Sin registros en el mes')),
+                  child: Center(child: Text('Sin registros en el período')),
                 ),
               for (final f in filas)
                 Card(
@@ -773,14 +863,19 @@ class _MesTabState extends State<_MesTab> {
   }
 }
 
-class _DatosMes {
+class _DatosReporte {
   final List<Empleado> empleados;
   final List<AsistenciaDia> asistencias;
   final String empresa;
+  final DateTime inicio, fin;
+  final String titulo;
 
-  const _DatosMes({
+  const _DatosReporte({
     required this.empleados,
     required this.asistencias,
     required this.empresa,
+    required this.inicio,
+    required this.fin,
+    required this.titulo,
   });
 }
