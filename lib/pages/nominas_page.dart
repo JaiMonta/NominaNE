@@ -317,6 +317,64 @@ class _NominaDetalleState extends State<_NominaDetalle> {
   }
 
   Future<void> _pdfNomina() async {
+    final opciones = await showDialog<({HojaNomina hoja, int recibos})>(
+      context: context,
+      builder: (ctx) {
+        var hoja = HojaNomina.a4;
+        var recibos = 4;
+        return StatefulBuilder(
+          builder: (ctx, setLocal) => AlertDialog(
+            title: const Text('PDF de nómina'),
+            content: SizedBox(
+              width: anchoDialogo(context, 380),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                DropdownButtonFormField<HojaNomina>(
+                  initialValue: hoja,
+                  decoration:
+                      const InputDecoration(labelText: 'Tamaño de hoja'),
+                  items: const [
+                    DropdownMenuItem(value: HojaNomina.a4, child: Text('A4')),
+                    DropdownMenuItem(
+                        value: HojaNomina.carta, child: Text('Carta')),
+                    DropdownMenuItem(
+                        value: HojaNomina.oficio, child: Text('Oficio')),
+                  ],
+                  onChanged: (v) =>
+                      setLocal(() => hoja = v ?? HojaNomina.a4),
+                ),
+                DropdownButtonFormField<int>(
+                  initialValue: recibos,
+                  decoration:
+                      const InputDecoration(labelText: 'Recibos por hoja'),
+                  items: const [
+                    DropdownMenuItem(value: 3, child: Text('3')),
+                    DropdownMenuItem(value: 4, child: Text('4')),
+                    DropdownMenuItem(value: 5, child: Text('5')),
+                    DropdownMenuItem(value: 6, child: Text('6')),
+                  ],
+                  onChanged: (v) => setLocal(() => recibos = v ?? 4),
+                ),
+                const SizedBox(height: 8),
+                Text('Para 5 o 6 recibos se recomienda Oficio.',
+                    style: Theme.of(ctx).textTheme.bodySmall),
+              ]),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancelar')),
+              FilledButton(
+                onPressed: () =>
+                    Navigator.pop(ctx, (hoja: hoja, recibos: recibos)),
+                child: const Text('Generar PDF'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (opciones == null) return;
+
     try {
       final recibos = await Repo.recibos(widget.nomina.id);
       final items = <ReciboPdfData>[];
@@ -326,7 +384,12 @@ class _NominaDetalleState extends State<_NominaDetalle> {
       final empresa = await Repo.ajuste('empresa_nombre');
       final rif = await Repo.ajuste('empresa_rif');
       await emitirNominaPdf(
-          nomina: widget.nomina, items: items, empresa: empresa, rif: rif);
+          nomina: widget.nomina,
+          items: items,
+          empresa: empresa,
+          rif: rif,
+          hoja: opciones.hoja,
+          recibosPorPagina: opciones.recibos);
     } catch (x) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -563,7 +626,7 @@ class _NominaDetalleState extends State<_NominaDetalle> {
                         ' · ${n.frecuencia}',
                         style: Theme.of(context).textTheme.titleMedium),
                     Text(
-                        'Aportes patronales — IVSS ${money.format(n.totalAporteIvss)} · RPE ${money.format(n.totalAporteRpe)} · FAOV ${money.format(n.totalAporteFaov)} · LOPCYMAT ${money.format(n.totalAporteLopcymat)}  (Total ${money.format(n.totalAportes)})',
+                        'Aportes patronales — IVSS ${money.format(n.totalAporteIvss)} · RPE ${money.format(n.totalAporteRpe)} · FAOV ${money.format(n.totalAporteFaov)} · LOPCYMAT ${money.format(n.totalAporteLopcymat)} · INCES ${money.format(n.totalAporteInce)}  (Total ${money.format(n.totalAportes)})',
                         style: Theme.of(context).textTheme.bodySmall),
                   ]),
             ),

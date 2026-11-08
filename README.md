@@ -46,7 +46,9 @@ recibos de pago en USD y Bolívares (VES) a la tasa del BCV, y aportes patronale
 4. **Conceptos** y **Novedades** del período (montos en USD).
 5. **Nóminas → Generar nómina**: calcula en VES a la tasa del cierre (borrador).
 6. Revisa recibos (Bs y US$), **Aprobar** y **Marcar pagada**.
-7. **PDF**: botón por recibo y **PDF nómina** (multipágina). Descarga directa.
+7. **PDF**: botón por recibo y **PDF nómina** (multipágina). En el PDF de nómina
+   se puede elegir **3 a 6 recibos por hoja** y tamaño **A4, Carta u Oficio**.
+   El PDF individual de un recibo sigue siendo una hoja por recibo.
 
 En **Generar nómina** puedes elegir **Tipo de nómina: Contratados**. Los
 empleados con modalidad **Contratado** se excluyen de la nómina normal y se
