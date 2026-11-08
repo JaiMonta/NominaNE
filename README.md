@@ -29,6 +29,7 @@ recibos de pago en USD y Bolívares (VES) a la tasa del BCV, y aportes patronale
    - `supabase/migrations/012_aprobar_nomina_limpia_novedades.sql`
    - `supabase/migrations/013_asistencia_qr.sql`
    - `supabase/migrations/014_asistencia_horarios.sql`
+   - `supabase/migrations/015_tope_aportes_ince.sql`
 3. En *Authentication → URL Configuration* agrega tu dominio (ej.
    `https://nomina-ne.web.app`) en **Site URL** y **Additional Redirect URLs**.
    Para pruebas, en *Authentication → Providers → Email* puedes desactivar la
@@ -65,11 +66,13 @@ alimentación) se pagan y suman al neto, pero no entran en la base de IVSS, RPE,
 FAOV ni prestaciones. En el recibo aparecen al final en la sección
 **Ingreso extra (no salarial)**.
 
-El IVSS se calcula con la retención semanal: salario mensual × 12 / 52 × 4% por
-cada lunes del período, con un tope mensual de 5 salarios mínimos
-(`ivss_tope_salarios_min = 5`, `salario_minimo_mensual` en Bs). El aporte
-patronal usa la misma base semanal y los mismos lunes, al 11% (riesgo máximo).
-Con `ivss_tope_salarios_min = 0` se desactiva el tope.
+El IVSS y el RPE usan la misma base semanal: salario mensual × 12 / 52, topada
+por `tope_mensual_aportes_bs` (650 Bs por defecto; equivale a 150 Bs semanales).
+Se aplica por cada lunes del período: IVSS trabajador 4%, IVSS patrono 11%,
+RPE trabajador 0,5% y RPE patrono 2%. Con `tope_mensual_aportes_bs = 0` se
+desactiva el tope. En meses de 4/5 lunes el IVSS trabajador resulta 24/30 Bs.
+El INCES patronal (2%) se incluye solo en nómina de fijos cuando hay más de 5
+trabajadores fijos activos (`inces_min_trabajadores`).
 
 ## Asistencia
 La pestaña **Asistencia** tiene dos vistas:
@@ -98,6 +101,13 @@ tras 5 intentos fallidos. Para control de presencia estricto se recomienda un
 kiosco en la entrada con el empleado marcando allí; el registro manual de RRHH
 queda siempre como respaldo.
 
+## Reporte de nómina
+La pestaña **Reporte nómina** agrupa las nóminas **aprobadas y pagadas** por
+período **semanal, mensual, trimestral, semestral o anual**. Incluye el resumen
+de ingresos, egresos, neto y aportes patronales (IVSS, RPE, FAOV, LOPCYMAT e
+INCES), el detalle de todos los conceptos por empleado y exportación a
+**PDF detallado** y **CSV**. Se filtra por el período de cierre (`periodo_fin`).
+
 ## Despliegue (Firebase Hosting)
 ```
 flutter build web --release
@@ -106,7 +116,7 @@ firebase deploy --only hosting
 `firebase.json` sirve `build/web` con rewrite SPA.
 
 ## Validación rápida
-- [ ] Migraciones 001 a 014 aplicadas.
+- [ ] Migraciones 001 a 015 aplicadas.
 - [ ] Dominio de Firebase agregado en Supabase Auth.
 - [ ] Tasa BCV del día cargada en *Tasas*.
 - [ ] Nombre/RIF de la empresa en *Parámetros*.
@@ -114,6 +124,7 @@ firebase deploy --only hosting
 - [ ] Descargar PDF de recibo y de nómina.
 - [ ] Asignar PIN de asistencia y probar el QR con un teléfono.
 - [ ] Verificar los reportes semanal, quincenal y mensual, y su PDF.
+- [ ] Verificar el reporte de nómina por período, su PDF y su CSV.
 
 ## Aviso legal
 La LOT adjunta (1997) fue reemplazada por la LOTTT (2012); los porcentajes de

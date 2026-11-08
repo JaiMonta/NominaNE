@@ -52,13 +52,14 @@ class ResultadoRecibo {
   final List<LineaRecibo> lineas;
   final double salarioDiario, totalIngresos, totalEgresos, neto;
   final double aportesPatronales;
-  final double aporteIvss, aporteRpe, aporteFaov, aporteLopcymat;
+  final double aporteIvss, aporteRpe, aporteFaov, aporteLopcymat, aporteInce;
   ResultadoRecibo(this.lineas, this.salarioDiario, this.totalIngresos,
       this.totalEgresos, this.neto, this.aportesPatronales,
       {this.aporteIvss = 0,
       this.aporteRpe = 0,
       this.aporteFaov = 0,
-      this.aporteLopcymat = 0});
+      this.aporteLopcymat = 0,
+      this.aporteInce = 0});
 
   double get totalIngresoSalarial => r2(lineas
       .where((l) => l.tipo == 'ingreso' && l.esSalarial)
@@ -151,6 +152,7 @@ class PayrollEngine {
     double aplicarUtilidadesDias = 0,
     double riesgoLopcymat = 0,
     bool soloSueldo = false,
+    int trabajadoresActivos = 0,
   }) {
     final lineas = <LineaRecibo>[];
     final sd = salarioDiario(salarioMensual);
@@ -252,17 +254,18 @@ class PayrollEngine {
         .where((l) => l.tipo == 'ingreso' && l.esSalarial)
         .fold<double>(0, (s, l) => s + l.monto);
 
-    // IVSS: retención semanal (salario anual / 52) por cada lunes del período,
-    // con tope mensual de N salarios mínimos repartido entre los lunes del mes.
+    // IVSS y RPE: base semanal topada, calculada por cada lunes del período.
     var ivssPatrono = 0.0;
+    var baseAportes = 0.0;
+    var lunes = 0;
     if (!soloSueldo) {
       final pctIvssEmp = _g('ivss_empleado_pct', .04);
       final pctIvssPat = _g('ivss_patrono_pct', .09);
-      final topeMensual =
-          _g('ivss_tope_salarios_min', 5) * _g('salario_minimo_mensual', 0);
+      final topeMensual = _g('tope_mensual_aportes_bs', 650);
+      final topeSemanal =
+          topeMensual > 0 ? topeMensual * 12 / 52 : double.infinity;
       final salarioSemanal = salarioMensual * 12 / 52;
       var ivssEmpleado = 0.0;
-      var lunes = 0;
       var dia = DateTime(
           periodoInicio.year, periodoInicio.month, periodoInicio.day);
       final finDia =
@@ -270,22 +273,15 @@ class PayrollEngine {
       while (!dia.isAfter(finDia)) {
         if (dia.weekday == DateTime.monday) {
           lunes++;
-          final lunesMes = lunesEntre(
-              DateTime(dia.year, dia.month, 1),
-              DateTime(dia.year, dia.month + 1, 0));
-          final topeEmp = topeMensual > 0 && lunesMes > 0
-              ? topeMensual * pctIvssEmp / lunesMes
-              : double.infinity;
-          final topePat = topeMensual > 0 && lunesMes > 0
-              ? topeMensual * pctIvssPat / lunesMes
-              : double.infinity;
-          ivssEmpleado += min(salarioSemanal * pctIvssEmp, topeEmp);
-          ivssPatrono += min(salarioSemanal * pctIvssPat, topePat);
+          final baseLunes = min(salarioSemanal, topeSemanal);
+          baseAportes += baseLunes;
+          ivssEmpleado += baseLunes * pctIvssEmp;
+          ivssPatrono += baseLunes * pctIvssPat;
         }
         dia = dia.add(const Duration(days: 1));
       }
       egr('IVSS', lunes.toDouble(), ivssEmpleado);
-      egr('RPE', 0, baseSalarial * _g('rpe_empleado_pct', .005));
+      egr('RPE', lunes.toDouble(), baseAportes * _g('rpe_empleado_pct', .005));
       egr('FAOV', 0, baseSalarial * _g('faov_empleado_pct', .01));
     }
 
@@ -317,7 +313,7 @@ class PayrollEngine {
     // Aportes patronales (desglosados por concepto)
     final aIvss = r2(ivssPatrono);
     final aRpe =
-        soloSueldo ? 0.0 : r2(baseSalarial * _g('rpe_patrono_pct', .02));
+        soloSueldo ? 0.0 : r2(baseAportes * _g('rpe_patrono_pct', .02));
     final aFaov =
         soloSueldo ? 0.0 : r2(baseSalarial * _g('faov_patrono_pct', .02));
     final aLop = soloSueldo
@@ -326,12 +322,18 @@ class PayrollEngine {
             (riesgoLopcymat > 0
                 ? riesgoLopcymat
                 : _g('lopcymat_patrono_pct', .0075)));
-    final aportes = r2(aIvss + aRpe + aFaov + aLop);
+    final aplicaInces =
+        !soloSueldo && trabajadoresActivos > _g('inces_min_trabajadores', 5);
+    final aInce = aplicaInces
+        ? r2(baseSalarial * _g('inces_patrono_pct', .02))
+        : 0.0;
+    final aportes = r2(aIvss + aRpe + aFaov + aLop + aInce);
 
     return ResultadoRecibo(lineas, r2(sd), totI, totE, r2(totI - totE), aportes,
         aporteIvss: aIvss,
         aporteRpe: aRpe,
         aporteFaov: aFaov,
-        aporteLopcymat: aLop);
+        aporteLopcymat: aLop,
+        aporteInce: aInce);
   }
 }

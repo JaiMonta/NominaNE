@@ -189,7 +189,10 @@ class Repo {
     final motor = PayrollEngine(params);
     final conceptos = await conceptos_();
     final porId = {for (final c in conceptos) c['id'] as String: c};
-    final emps = (await empleados())
+    final todos = await empleados();
+    final trabajadoresFijosActivos =
+        todos.where((e) => e.activo && e.modalidad == 'normal').length;
+    final emps = todos
         .where((e) => e.activo && e.modalidad == modalidad)
         .where((e) => e.frecuenciaPago == frecuencia)
         .where((e) => !e.fechaIngreso.isAfter(fin))
@@ -243,7 +246,7 @@ class Repo {
         .single();
 
     double tI = 0, tE = 0, tN = 0, tA = 0;
-    double tIvss = 0, tRpe = 0, tFaov = 0, tLop = 0;
+    double tIvss = 0, tRpe = 0, tFaov = 0, tLop = 0, tInce = 0;
     for (final e in emps) {
       // Montos de novedades en USD -> VES (0 = lo calcula el motor).
       final novs = esContratado
@@ -270,6 +273,7 @@ class Repo {
         novedades: novs,
         aplicarUtilidadesDias: esContratado ? 0 : utilidadesDias,
         soloSueldo: esContratado,
+        trabajadoresActivos: trabajadoresFijosActivos,
       );
       final rec = await db
           .from('recibos')
@@ -291,6 +295,7 @@ class Repo {
             'aporte_rpe_patronal': r.aporteRpe,
             'aporte_faov_patronal': r.aporteFaov,
             'aporte_lopcymat_patronal': r.aporteLopcymat,
+            'aporte_ince_patronal': r.aporteInce,
           })
           .select()
           .single();
@@ -316,6 +321,7 @@ class Repo {
       tRpe += r.aporteRpe;
       tFaov += r.aporteFaov;
       tLop += r.aporteLopcymat;
+      tInce += r.aporteInce;
     }
     await db.from('nominas').update({
       'total_ingresos': r2(tI),
@@ -326,6 +332,7 @@ class Repo {
       'total_aporte_rpe': r2(tRpe),
       'total_aporte_faov': r2(tFaov),
       'total_aporte_lopcymat': r2(tLop),
+      'total_aporte_ince': r2(tInce),
     }).eq('id', nom['id']);
     return emps.length;
   }

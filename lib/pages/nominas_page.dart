@@ -421,6 +421,7 @@ class _NominaDetalleState extends State<_NominaDetalle> {
                       Text('RPE: ${money.format(r.aporteRpe)} Bs'),
                       Text('FAOV: ${money.format(r.aporteFaov)} Bs'),
                       Text('LOPCYMAT: ${money.format(r.aporteLopcymat)} Bs'),
+                      Text('INCES: ${money.format(r.aporteInce)} Bs'),
                       Text('Total: ${money.format(r.aportes)} Bs',
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                     ],

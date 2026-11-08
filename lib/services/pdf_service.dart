@@ -280,6 +280,8 @@ pw.Widget _reciboWidget({
             pw.Text(
                 'FAOV: ${_money.format(recibo.aporteFaov)} Bs   ·   LOPCYMAT: ${_money.format(recibo.aporteLopcymat)} Bs',
                 style: small),
+            pw.Text('INCES: ${_money.format(recibo.aporteInce)} Bs',
+                style: small),
             pw.Text('Total aportes: ${_money.format(recibo.aportes)} Bs',
                 style: bold),
           ]),

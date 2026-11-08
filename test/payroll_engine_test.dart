@@ -32,6 +32,7 @@ void main() {
       'ivss_empleado_pct': 0.04,
       'rpe_empleado_pct': 0,
       'faov_empleado_pct': 0,
+      'tope_mensual_aportes_bs': 0,
       'salario_minimo_mensual': 0,
     });
 
@@ -140,6 +141,7 @@ void main() {
       'recargo_feriado': 0.5,
       'ivss_empleado_pct': 0.04,
       'ivss_patrono_pct': 0.11,
+      'tope_mensual_aportes_bs': 0,
       'ivss_tope_salarios_min': 0,
       'salario_minimo_mensual': 130,
     });
@@ -164,14 +166,14 @@ void main() {
     expect(r.aporteIvss, 4445.61);
   });
 
-  test('IVSS con tope 5 reparte el máximo mensual por lunes', () {
+  test('IVSS con tope semanal 150 en quincena de 2 lunes', () {
     final motor = PayrollEngine({
       'dias_mes': 30,
       'horas_jornada_diurna': 8,
       'recargo_feriado': 0.5,
       'ivss_empleado_pct': 0.04,
       'ivss_patrono_pct': 0.11,
-      'ivss_tope_salarios_min': 5,
+      'tope_mensual_aportes_bs': 650,
       'salario_minimo_mensual': 130,
     });
     final r = motor.calcular(
@@ -190,8 +192,8 @@ void main() {
 
     final ivss = r.lineas.firstWhere((l) => l.codigo == 'IVSS');
     expect(ivss.cantidad, 2);
-    expect(ivss.monto, 13);
-    expect(r.aporteIvss, 35.75);
+    expect(ivss.monto, 12);
+    expect(r.aporteIvss, 33);
   });
 
   test('IVSS semanal sin tope en nómina mensual', () {
@@ -199,6 +201,7 @@ void main() {
       'dias_mes': 30,
       'ivss_empleado_pct': 0.04,
       'ivss_patrono_pct': 0.11,
+      'tope_mensual_aportes_bs': 0,
       'ivss_tope_salarios_min': 0,
       'salario_minimo_mensual': 130,
     });
@@ -221,12 +224,12 @@ void main() {
     expect(r.aporteIvss, 8891.22);
   });
 
-  test('IVSS mensual con tope 5 queda en 26 Bs', () {
+  test('IVSS mensual con tope semanal 150 usa 4 lunes', () {
     final motor = PayrollEngine({
       'dias_mes': 30,
       'ivss_empleado_pct': 0.04,
       'ivss_patrono_pct': 0.11,
-      'ivss_tope_salarios_min': 5,
+      'tope_mensual_aportes_bs': 650,
       'salario_minimo_mensual': 130,
     });
     final r = motor.calcular(
@@ -244,16 +247,16 @@ void main() {
 
     final ivss = r.lineas.firstWhere((l) => l.codigo == 'IVSS');
     expect(ivss.cantidad, 4);
-    expect(ivss.monto, 26);
-    expect(r.aporteIvss, 71.50);
+    expect(ivss.monto, 24);
+    expect(r.aporteIvss, 66);
   });
 
-  test('IVSS con tope en mes de 5 lunes y quincena de 3 lunes', () {
+  test('IVSS con tope semanal 150 en mes de 5 lunes y quincena de 3 lunes', () {
     final motor = PayrollEngine({
       'dias_mes': 30,
       'ivss_empleado_pct': 0.04,
       'ivss_patrono_pct': 0.11,
-      'ivss_tope_salarios_min': 5,
+      'tope_mensual_aportes_bs': 650,
       'salario_minimo_mensual': 130,
     });
     final mes = motor.calcular(
@@ -281,11 +284,11 @@ void main() {
       novedades: [],
     );
 
-    expect(mes.lineas.firstWhere((l) => l.codigo == 'IVSS').monto, 26);
-    expect(mes.aporteIvss, 71.50);
+    expect(mes.lineas.firstWhere((l) => l.codigo == 'IVSS').monto, 30);
+    expect(mes.aporteIvss, 82.50);
     expect(quincena.lineas.firstWhere((l) => l.codigo == 'IVSS').cantidad, 3);
-    expect(quincena.lineas.firstWhere((l) => l.codigo == 'IVSS').monto, 15.60);
-    expect(quincena.aporteIvss, 42.90);
+    expect(quincena.lineas.firstWhere((l) => l.codigo == 'IVSS').monto, 18);
+    expect(quincena.aporteIvss, 49.50);
   });
 
   test('IVSS con tope no recorta si el salario está bajo el tope', () {
@@ -293,7 +296,7 @@ void main() {
       'dias_mes': 30,
       'ivss_empleado_pct': 0.04,
       'ivss_patrono_pct': 0.11,
-      'ivss_tope_salarios_min': 5,
+      'tope_mensual_aportes_bs': 650,
       'salario_minimo_mensual': 130,
     });
     final r = motor.calcular(
@@ -313,6 +316,141 @@ void main() {
     expect(r.aporteIvss, 60.92);
   });
 
+  test('RPE usa la misma base semanal topada que el IVSS', () {
+    final motor = PayrollEngine({
+      'dias_mes': 30,
+      'ivss_empleado_pct': 0.04,
+      'ivss_patrono_pct': 0.11,
+      'rpe_empleado_pct': 0.005,
+      'rpe_patrono_pct': 0.02,
+      'faov_empleado_pct': 0,
+      'faov_patrono_pct': 0,
+      'lopcymat_patrono_pct': 0,
+      'tope_mensual_aportes_bs': 650,
+    });
+    final r = motor.calcular(
+      salarioMensual: 87565,
+      frecuencia: 'mensual',
+      ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 10, 1),
+      periodoFin: DateTime(2026, 10, 31),
+      conceptos: [
+        _concepto('SUELDO', 'ingreso'),
+        _concepto('IVSS', 'egreso', esSalarial: false),
+        _concepto('RPE', 'egreso', esSalarial: false),
+      ],
+      novedades: [],
+    );
+
+    expect(r.lineas.firstWhere((l) => l.codigo == 'IVSS').monto, 24);
+    expect(r.aporteIvss, 66);
+    expect(r.lineas.firstWhere((l) => l.codigo == 'RPE').monto, 3);
+    expect(r.aporteRpe, 12);
+  });
+
+  test('RPE quincenal usa 2 lunes de base 150', () {
+    final motor = PayrollEngine({
+      'dias_mes': 30,
+      'rpe_empleado_pct': 0.005,
+      'rpe_patrono_pct': 0.02,
+      'tope_mensual_aportes_bs': 650,
+    });
+    final r = motor.calcular(
+      salarioMensual: 87565,
+      frecuencia: 'quincenal',
+      ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 10, 1),
+      periodoFin: DateTime(2026, 10, 15),
+      conceptos: [
+        _concepto('SUELDO', 'ingreso'),
+        _concepto('RPE', 'egreso', esSalarial: false),
+      ],
+      novedades: [],
+    );
+
+    expect(r.lineas.firstWhere((l) => l.codigo == 'RPE').monto, 1.50);
+    expect(r.aporteRpe, 6);
+  });
+
+  test('RPE con salario bajo el tope usa el salario semanal', () {
+    final motor = PayrollEngine({
+      'dias_mes': 30,
+      'rpe_empleado_pct': 0.005,
+      'rpe_patrono_pct': 0.02,
+      'tope_mensual_aportes_bs': 650,
+    });
+    final r = motor.calcular(
+      salarioMensual: 600,
+      frecuencia: 'mensual',
+      ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 10, 1),
+      periodoFin: DateTime(2026, 10, 31),
+      conceptos: [
+        _concepto('SUELDO', 'ingreso'),
+        _concepto('RPE', 'egreso', esSalarial: false),
+      ],
+      novedades: [],
+    );
+
+    expect(r.lineas.firstWhere((l) => l.codigo == 'RPE').monto, 2.77);
+    expect(r.aporteRpe, 11.08);
+  });
+
+  test('INCES se aplica solo a fijos con más de 5 trabajadores activos', () {
+    final motor = PayrollEngine({
+      'dias_mes': 30,
+      'ivss_empleado_pct': 0.04,
+      'ivss_patrono_pct': 0.11,
+      'rpe_empleado_pct': 0.005,
+      'rpe_patrono_pct': 0.02,
+      'faov_empleado_pct': 0,
+      'faov_patrono_pct': 0,
+      'lopcymat_patrono_pct': 0,
+      'tope_mensual_aportes_bs': 650,
+      'inces_patrono_pct': 0.02,
+      'inces_min_trabajadores': 5,
+    });
+
+    ResultadoRecibo conSeis() => motor.calcular(
+          salarioMensual: 87565,
+          frecuencia: 'mensual',
+          ingreso: DateTime(2020, 1, 1),
+          periodoInicio: DateTime(2026, 10, 1),
+          periodoFin: DateTime(2026, 10, 31),
+          conceptos: [_concepto('SUELDO', 'ingreso')],
+          novedades: [],
+          trabajadoresActivos: 6,
+        );
+
+    expect(conSeis().aporteInce, 1751.30);
+    expect(conSeis().aportesPatronales, 1829.30);
+
+    final conCinco = motor.calcular(
+      salarioMensual: 87565,
+      frecuencia: 'mensual',
+      ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 10, 1),
+      periodoFin: DateTime(2026, 10, 31),
+      conceptos: [_concepto('SUELDO', 'ingreso')],
+      novedades: [],
+      trabajadoresActivos: 5,
+    );
+    expect(conCinco.aporteInce, 0);
+
+    final contratado = motor.calcular(
+      salarioMensual: 87565,
+      frecuencia: 'mensual',
+      ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 10, 1),
+      periodoFin: DateTime(2026, 10, 31),
+      conceptos: [_concepto('SUELDO', 'ingreso')],
+      novedades: [],
+      trabajadoresActivos: 6,
+      soloSueldo: true,
+    );
+    expect(contratado.aporteInce, 0);
+  });
+
   test('soloSueldo paga únicamente el sueldo mensual sin deducciones', () {
     final motor = PayrollEngine({
       'dias_mes': 30,
@@ -320,7 +458,7 @@ void main() {
       'ivss_patrono_pct': 0.11,
       'rpe_empleado_pct': 0.005,
       'faov_empleado_pct': 0.01,
-      'ivss_tope_salarios_min': 5,
+      'tope_mensual_aportes_bs': 650,
       'salario_minimo_mensual': 130,
     });
     final r = motor.calcular(
@@ -356,7 +494,7 @@ void main() {
       'ivss_patrono_pct': 0.11,
       'rpe_empleado_pct': 0.005,
       'faov_empleado_pct': 0.01,
-      'ivss_tope_salarios_min': 5,
+      'tope_mensual_aportes_bs': 650,
       'salario_minimo_mensual': 130,
     });
     final r = motor.calcular(
@@ -392,7 +530,7 @@ void main() {
       'ivss_patrono_pct': 0.11,
       'rpe_empleado_pct': 0.005,
       'faov_empleado_pct': 0.01,
-      'ivss_tope_salarios_min': 5,
+      'tope_mensual_aportes_bs': 650,
       'salario_minimo_mensual': 130,
     });
     final r = motor.calcular(
