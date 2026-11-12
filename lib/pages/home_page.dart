@@ -6,6 +6,7 @@ import 'asistencia_page.dart';
 import 'conceptos_page.dart';
 import 'departamentos_page.dart';
 import 'empleados_page.dart';
+import 'liquidaciones_page.dart';
 import 'nominas_page.dart';
 import 'novedades_page.dart';
 import 'parametros_page.dart';
@@ -41,6 +42,7 @@ class _HomePageState extends State<HomePage> {
       (Icons.edit_note, 'Novedades'),
       (Icons.payments, 'Nóminas'),
       (Icons.analytics, 'Reporte nómina'),
+      (Icons.account_balance_wallet, 'Liquidaciones'),
       (Icons.gavel, 'Parámetros'),
       (Icons.currency_exchange, 'Tasas'),
     ];
@@ -52,6 +54,7 @@ class _HomePageState extends State<HomePage> {
       NovedadesPage(puedeEditar: puedeEditar),
       NominasPage(puedeEditar: puedeEditar),
       const ReporteNominaPage(),
+      LiquidacionesPage(puedeEditar: puedeEditar),
       ParametrosPage(puedeEditar: puedeEditar),
       TasasPage(puedeEditar: puedeEditar),
     ];

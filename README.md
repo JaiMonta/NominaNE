@@ -29,8 +29,12 @@ recibos de pago en USD y Bolívares (VES) a la tasa del BCV, y aportes patronale
    - `supabase/migrations/012_aprobar_nomina_limpia_novedades.sql`
    - `supabase/migrations/013_asistencia_qr.sql`
    - `supabase/migrations/014_asistencia_horarios.sql`
-   - `supabase/migrations/015_tope_aportes_ince.sql`
-   - `supabase/migrations/016_recalcular_borrar_nomina.sql`
+- `supabase/migrations/015_tope_aportes_ince.sql`
+- `supabase/migrations/016_recalcular_borrar_nomina.sql`
+- `supabase/migrations/017_parametros_lottt.sql`
+- `supabase/migrations/018_liquidaciones_prestaciones.sql`
+- `supabase/migrations/019_inicializar_liquidaciones.sql`
+- `supabase/migrations/020_empleado_liquidaciones_trigger.sql`
 3. En *Authentication → URL Configuration* agrega tu dominio (ej.
    `https://nomina-ne.web.app`) en **Site URL** y **Additional Redirect URLs**.
    Para pruebas, en *Authentication → Providers → Email* puedes desactivar la
@@ -127,6 +131,28 @@ se restauran si la nómina se elimina. Las que ya se habían eliminado antes de 
 migración 016 no se pueden recuperar. Las nóminas pagadas no se recalculan ni se
 eliminan.
 
+## Liquidaciones
+La pestaña **Liquidaciones** incluye:
+
+- **Liquidar**: calcula prestaciones (garantía + intereses vs retroactivo),
+  vacaciones y bono pendientes/fraccionados, utilidades fraccionadas,
+  indemnización Art. 92 cuando corresponda, salario pendiente y deducciones.
+- **Prestaciones**: saldo inicial, movimientos de garantía/días adicionales,
+  anticipos, pagos, ajustes y generación de intereses mensuales con tasas BCV.
+- **Vacaciones**: períodos generados desde la fecha de ingreso, días
+  disfrutados/pagados y saldos pendientes.
+- **Tasas de interés**: carga mensual de tasas activa, pasiva, promedio y
+  rendimiento de fideicomiso.
+
+Al aprobar una liquidación el trabajador queda inactivo con su fecha y motivo
+de egreso. El PDF incluye el comparativo garantía/retroactivo y el detalle de
+cada concepto con su base legal.
+
+La migración 017 corrige los parámetros a la LOTTT: bono vacacional 15 días
+(hasta 30), utilidades mínimo 30 días y referencias legales actualizadas. Las
+prestaciones usan salario integral; vacaciones, bono y utilidades usan salario
+normal.
+
 ## Despliegue (Firebase Hosting)
 ```
 flutter build web --release
@@ -135,7 +161,7 @@ firebase deploy --only hosting
 `firebase.json` sirve `build/web` con rewrite SPA.
 
 ## Validación rápida
-- [ ] Migraciones 001 a 016 aplicadas.
+- [ ] Migraciones 001 a 020 aplicadas.
 - [ ] Dominio de Firebase agregado en Supabase Auth.
 - [ ] Tasa BCV del día cargada en *Tasas*.
 - [ ] Nombre/RIF de la empresa en *Parámetros*.

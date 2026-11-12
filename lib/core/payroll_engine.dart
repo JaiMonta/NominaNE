@@ -104,7 +104,7 @@ class PayrollEngine {
     return a < 0 ? 0 : a;
   }
 
-  /// Días de vacaciones (Art. 219): base + 1 por año adicional, tope.
+  /// Días de vacaciones (LOTTT Art. 190): base + 1 por año adicional, tope.
   double diasVacaciones(int anios) {
     if (anios < 1) return 0;
     final d = _g('vacaciones_dias_base', 15) +
@@ -113,16 +113,16 @@ class PayrollEngine {
     return d > m ? m : d;
   }
 
-  /// Días de bono vacacional (Art. 223).
+  /// Días de bono vacacional (LOTTT Art. 192).
   double diasBonoVacacional(int anios) {
     if (anios < 1) return 0;
-    final d = _g('bono_vac_dias_base', 7) +
+    final d = _g('bono_vac_dias_base', 15) +
         (anios - 1) * _g('bono_vac_dia_adicional', 1);
-    final m = _g('bono_vac_dias_max', 21);
+    final m = _g('bono_vac_dias_max', 30);
     return d > m ? m : d;
   }
 
-  /// Días de prestación de antigüedad acreditados en un mes (Art. 108).
+  /// Días de prestación de antigüedad acreditados en un mes (LOTTT Art. 142).
   double diasAntiguedadMes(DateTime ingreso, DateTime finMes) {
     final meses =
         (finMes.year - ingreso.year) * 12 + finMes.month - ingreso.month;

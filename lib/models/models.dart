@@ -40,7 +40,8 @@ class Departamento {
 class Empleado {
   final String? id;
   String cedula, nombres, apellidos, tipo, jornada, frecuenciaPago, modalidad;
-  String? cargo, departamento, departamentoId, banco, cuenta, email, telefono;
+  String? cargo, departamento, departamentoId, banco, cuenta, email, telefono,
+      motivoEgreso;
   DateTime fechaIngreso;
   DateTime? fechaEgreso, fechaNacimiento;
   double salarioMensualUsd;
@@ -58,6 +59,7 @@ class Empleado {
     DateTime? fechaIngreso,
     this.fechaEgreso,
     this.fechaNacimiento,
+    this.motivoEgreso,
     this.salarioMensualUsd = 0,
     this.jornada = 'diurna',
     this.frecuenciaPago = 'quincenal',
@@ -86,6 +88,7 @@ class Empleado {
         fechaNacimiento: j['fecha_nacimiento'] == null
             ? null
             : DateTime.parse(j['fecha_nacimiento']),
+        motivoEgreso: j['motivo_egreso'],
         salarioMensualUsd: _d(j['salario_mensual_usd']),
         jornada: j['jornada'] ?? 'diurna',
         frecuenciaPago: j['frecuencia_pago'] ?? 'quincenal',
@@ -107,6 +110,7 @@ class Empleado {
         'tipo': tipo,
         'fecha_ingreso': fechaIngreso.toIso8601String().substring(0, 10),
         'fecha_egreso': fechaEgreso?.toIso8601String().substring(0, 10),
+        'motivo_egreso': motivoEgreso,
         'fecha_nacimiento':
             fechaNacimiento?.toIso8601String().substring(0, 10),
         'salario_mensual_usd': salarioMensualUsd,
