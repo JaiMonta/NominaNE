@@ -30,6 +30,7 @@ recibos de pago en USD y Bolívares (VES) a la tasa del BCV, y aportes patronale
    - `supabase/migrations/013_asistencia_qr.sql`
    - `supabase/migrations/014_asistencia_horarios.sql`
    - `supabase/migrations/015_tope_aportes_ince.sql`
+   - `supabase/migrations/016_recalcular_borrar_nomina.sql`
 3. En *Authentication → URL Configuration* agrega tu dominio (ej.
    `https://nomina-ne.web.app`) en **Site URL** y **Additional Redirect URLs**.
    Para pruebas, en *Authentication → Providers → Email* puedes desactivar la
@@ -45,6 +46,8 @@ recibos de pago en USD y Bolívares (VES) a la tasa del BCV, y aportes patronale
 3. **Empleados**: carga empleados con salario mensual en **USD**.
 4. **Conceptos** y **Novedades** del período (montos en USD).
 5. **Nóminas → Generar nómina**: calcula en VES a la tasa del cierre (borrador).
+   También se puede elegir **tasa del día, tasa registrada o tasa manual** antes
+   de generar.
 6. Revisa recibos (Bs y US$), **Aprobar** y **Marcar pagada**.
 7. **PDF**: botón por recibo y **PDF nómina** (multipágina). En el PDF de nómina
    se puede elegir **3 a 6 recibos por hoja** y tamaño **A4, Carta u Oficio**.
@@ -110,6 +113,20 @@ de ingresos, egresos, neto y aportes patronales (IVSS, RPE, FAOV, LOPCYMAT e
 INCES), el detalle de todos los conceptos por empleado y exportación a
 **PDF detallado** y **CSV**. Se filtra por el período de cierre (`periodo_fin`).
 
+## Recalcular y eliminar nóminas
+En una nómina **aprobada y aún no pagada** se puede:
+
+- **Recalcular** con una tasa del día, una tasa registrada o una tasa manual.
+  La misma nómina se reemplaza con los nuevos montos en Bs/USD; se conserva el
+  estado aprobado y se actualizan PDF, recibos y reportes.
+- **Eliminar** la nómina y sus recibos antes de pagarla.
+- Consultar el **historial de recálculos** (tasa anterior/nueva y fechas).
+
+Las novedades no recurrentes aplicadas a una nómina se marcan como consumidas y
+se restauran si la nómina se elimina. Las que ya se habían eliminado antes de la
+migración 016 no se pueden recuperar. Las nóminas pagadas no se recalculan ni se
+eliminan.
+
 ## Despliegue (Firebase Hosting)
 ```
 flutter build web --release
@@ -118,7 +135,7 @@ firebase deploy --only hosting
 `firebase.json` sirve `build/web` con rewrite SPA.
 
 ## Validación rápida
-- [ ] Migraciones 001 a 015 aplicadas.
+- [ ] Migraciones 001 a 016 aplicadas.
 - [ ] Dominio de Firebase agregado en Supabase Auth.
 - [ ] Tasa BCV del día cargada en *Tasas*.
 - [ ] Nombre/RIF de la empresa en *Parámetros*.

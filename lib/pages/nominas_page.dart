@@ -5,6 +5,8 @@ import '../models/models.dart';
 import '../services/pdf_service.dart';
 import '../services/repo.dart';
 import 'empleados_page.dart' show money, usd;
+import 'recalcular_nomina_dialog.dart';
+import 'tasa_selector_dialog.dart';
 
 class NominasPage extends StatefulWidget {
   final bool puedeEditar;
@@ -33,7 +35,11 @@ class _NominasPageState extends State<NominasPage> {
           onBack: () {
             setState(() => _sel = null);
             _reload();
-          });
+          },
+          onUpdated: (n) => setState(() {
+                _sel = n;
+                _f = Repo.nominas();
+              }));
     }
     return Scaffold(
       floatingActionButton: widget.puedeEditar
@@ -82,14 +88,39 @@ class _NuevaNominaState extends State<_NuevaNomina> {
   String nombre = '', frecuencia = 'quincenal', modalidad = 'normal';
   DateTime? ini, fin;
   double utilidades = 0;
-  double? _tasa;
+  double? _tasaAuto;
+  double? _tasaSel;
+  DateTime? _tasaFechaSel;
   bool _busy = false;
   String? _err;
+
+  double? get _tasaEfectiva => _tasaSel ?? _tasaAuto;
+  DateTime? get _fechaTasaEfectiva => _tasaSel != null ? _tasaFechaSel : fin;
 
   Future<void> _cargarTasa() async {
     if (fin == null) return;
     final t = await Repo.tasa(fin!);
-    if (mounted) setState(() => _tasa = t);
+    if (mounted) setState(() => _tasaAuto = t);
+  }
+
+  Future<void> _elegirTasa() async {
+    final r = await showDialog<({double tasa, DateTime fecha})>(
+      context: context,
+      builder: (_) => const TasaSelectorDialog(),
+    );
+    if (r != null) {
+      setState(() {
+        _tasaSel = r.tasa;
+        _tasaFechaSel = r.fecha;
+      });
+    }
+  }
+
+  void _usarTasaAutomatica() {
+    setState(() {
+      _tasaSel = null;
+      _tasaFechaSel = null;
+    });
   }
 
   Future<DateTime?> _pick() => showDatePicker(
@@ -106,9 +137,9 @@ class _NuevaNominaState extends State<_NuevaNomina> {
       setState(() => _err = 'Complete nombre y un período válido');
       return;
     }
-    if (_tasa == null) {
+    if (_tasaEfectiva == null) {
       setState(() => _err =
-          'No hay tasa BCV cargada para el cierre del período. Regístrela en "Tasas".');
+          'No hay tasa BCV. Seleccione una tasa o regístrela en "Tasas".');
       return;
     }
     setState(() {
@@ -122,7 +153,9 @@ class _NuevaNominaState extends State<_NuevaNomina> {
           inicio: ini!,
           fin: fin!,
           utilidadesDias: utilidades,
-          modalidad: modalidad);
+          modalidad: modalidad,
+          tasaOverride: _tasaSel,
+          tasaFecha: _tasaFechaSel);
       if (!mounted) return;
       if (n == 0) {
         setState(() {
@@ -147,8 +180,9 @@ class _NuevaNominaState extends State<_NuevaNomina> {
         title: const Text('Generar nómina'),
         content: SizedBox(
           width: anchoDialogo(context, 420),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(
+          child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(
                 decoration: InputDecoration(
                     labelText: modalidad == 'contratado'
                         ? 'Nombre (ej. Contratados octubre)'
@@ -212,13 +246,26 @@ class _NuevaNominaState extends State<_NuevaNomina> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.currency_exchange),
-              title: Text(_tasa == null
-                  ? 'Tasa BCV: no cargada para el cierre'
-                  : 'Tasa BCV aplicable: ${usd.format(_tasa!)} Bs/USD'),
-              subtitle: _tasa == null
-                  ? const Text('Regístrela en la pestaña "Tasas"')
-                  : null,
+              title: Text(_tasaEfectiva == null
+                  ? 'Tasa BCV: no cargada'
+                  : 'Tasa BCV: ${usd.format(_tasaEfectiva!)} Bs/USD'
+                      '${_fechaTasaEfectiva == null ? '' : ' (${fecha(_fechaTasaEfectiva!)})'}'),
+              subtitle: Text(_tasaSel != null
+                  ? 'Tasa seleccionada manualmente'
+                  : 'Tasa automática al cierre del período'),
+              trailing: TextButton(
+                onPressed: _busy ? null : _elegirTasa,
+                child: const Text('Elegir tasa'),
+              ),
             ),
+            if (_tasaSel != null)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _busy ? null : _usarTasaAutomatica,
+                  child: const Text('Usar tasa automática'),
+                ),
+              ),
             if (_err != null)
               Text(_err!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error)),
@@ -226,7 +273,8 @@ class _NuevaNominaState extends State<_NuevaNomina> {
               const Padding(
                   padding: EdgeInsets.only(top: 12),
                   child: LinearProgressIndicator()),
-          ]),
+            ]),
+          ),
         ),
         actions: [
           TextButton(
@@ -243,8 +291,12 @@ class _NominaDetalle extends StatefulWidget {
   final Nomina nomina;
   final bool puedeEditar;
   final VoidCallback onBack;
+  final void Function(Nomina) onUpdated;
   const _NominaDetalle(
-      {required this.nomina, required this.puedeEditar, required this.onBack});
+      {required this.nomina,
+      required this.puedeEditar,
+      required this.onBack,
+      required this.onUpdated});
   @override
   State<_NominaDetalle> createState() => _NominaDetalleState();
 }
@@ -260,8 +312,8 @@ class _NominaDetalleState extends State<_NominaDetalle> {
         builder: (_) => AlertDialog(
           title: const Text('Aprobar nómina'),
           content: const Text(
-              'Se aprobará la nómina y se eliminarán las novedades no '
-              'recurrentes incluidas en este período. Las recurrentes se '
+              'Se aprobará la nómina y las novedades no recurrentes incluidas '
+              'dejarán de aparecer como pendientes. Las recurrentes se '
               'conservan.'),
           actions: [
             TextButton(
@@ -280,7 +332,7 @@ class _NominaDetalleState extends State<_NominaDetalle> {
         setState(() => estado = 'aprobada');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(eliminadas > 0
-                ? 'Nómina aprobada. Se eliminaron $eliminadas novedades no recurrentes.'
+                ? 'Nómina aprobada. Se aplicaron $eliminadas novedades no recurrentes.'
                 : 'Nómina aprobada.')));
       } catch (x) {
         if (!mounted) return;
@@ -291,6 +343,122 @@ class _NominaDetalleState extends State<_NominaDetalle> {
     }
     await Repo.cambiarEstado(widget.nomina.id, e);
     setState(() => estado = e);
+  }
+
+  @override
+  void didUpdateWidget(covariant _NominaDetalle oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.nomina.id != widget.nomina.id ||
+        oldWidget.nomina.tasaBcv != widget.nomina.tasaBcv) {
+      _f = Repo.recibos(widget.nomina.id);
+    }
+  }
+
+  Future<void> _recalcular() async {
+    final opciones = await showDialog<({double tasa, DateTime fecha})>(
+      context: context,
+      builder: (_) => RecalcularNominaDialog(nomina: widget.nomina),
+    );
+    if (opciones == null) return;
+
+    try {
+      await Repo.recalcularNomina(
+          widget.nomina.id, opciones.tasa, opciones.fecha);
+      final lista = await Repo.nominas();
+      final actual = lista.firstWhere((x) => x.id == widget.nomina.id,
+          orElse: () => widget.nomina);
+      widget.onUpdated(actual);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'Nómina recalculada con tasa ${opciones.tasa.toStringAsFixed(4)} Bs/USD.')));
+      }
+    } catch (x) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('No se pudo recalcular: $x')));
+      }
+    }
+  }
+
+  Future<void> _eliminar() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar nómina'),
+        content: Text(
+            estado == 'aprobada'
+                ? 'Se eliminará la nómina aprobada y sus recibos. '
+                    'Las novedades no recurrentes que estén aplicadas a esta nómina volverán a estar disponibles.'
+                : 'Se eliminará la nómina y sus recibos.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Eliminar')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await Repo.borrarNomina(widget.nomina.id);
+      widget.onBack();
+    } catch (x) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('No se pudo eliminar: $x')));
+      }
+    }
+  }
+
+  Future<void> _historial() async {
+    try {
+      final lista = await Repo.recalculosNomina(widget.nomina.id);
+      if (!mounted) return;
+
+      final items = <Widget>[];
+      for (final r in lista) {
+        final anterior = double.tryParse('${r['tasa_anterior']}') ?? 0;
+        final nueva = double.tryParse('${r['tasa_nueva']}') ?? 0;
+        final fechaAnterior = '${r['fecha_anterior'] ?? '—'}';
+        final fechaNueva = '${r['fecha_nueva'] ?? '—'}';
+        final rawCreado = r['created_at'];
+        final creado = rawCreado == null
+            ? ''
+            : ' · ${fecha(DateTime.parse('$rawCreado').toLocal())}';
+        items.add(ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+              '${money.format(anterior)} → ${money.format(nueva)} Bs/USD'),
+          subtitle: Text('$fechaAnterior → $fechaNueva$creado'),
+        ));
+      }
+
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Historial de recálculos'),
+          content: SizedBox(
+            width: anchoDialogo(context, 420),
+            child: items.isEmpty
+                ? const Text('Esta nómina no tiene recálculos.')
+                : ListView(shrinkWrap: true, children: items),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cerrar')),
+          ],
+        ),
+      );
+    } catch (x) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No se pudo cargar el historial: $x')));
+      }
+    }
   }
 
   Future<void> _pdfRecibo(Recibo r, List<Map<String, dynamic>> det) async {
@@ -626,6 +794,10 @@ class _NominaDetalleState extends State<_NominaDetalle> {
                         ' · ${n.frecuencia}',
                         style: Theme.of(context).textTheme.titleMedium),
                     Text(
+                        'Tasa BCV: ${n.tasaBcv == null ? '—' : money.format(n.tasaBcv!)} Bs/USD'
+                        '${n.tasaFecha == null ? '' : ' · ${fecha(n.tasaFecha!)}'}',
+                        style: Theme.of(context).textTheme.bodySmall),
+                    Text(
                         'Aportes patronales — IVSS ${money.format(n.totalAporteIvss)} · RPE ${money.format(n.totalAporteRpe)} · FAOV ${money.format(n.totalAporteFaov)} · LOPCYMAT ${money.format(n.totalAporteLopcymat)} · INCES ${money.format(n.totalAporteInce)}  (Total ${money.format(n.totalAportes)})',
                         style: Theme.of(context).textTheme.bodySmall),
                   ]),
@@ -643,16 +815,23 @@ class _NominaDetalleState extends State<_NominaDetalle> {
                   onPressed: () => _estado('aprobada'),
                   child: const Text('Aprobar')),
               OutlinedButton(
-                  onPressed: () async {
-                    await Repo.borrarNomina(n.id);
-                    widget.onBack();
-                  },
-                  child: const Text('Eliminar')),
+                  onPressed: _eliminar, child: const Text('Eliminar')),
             ],
-            if (widget.puedeEditar && estado == 'aprobada')
+            if (widget.puedeEditar && estado == 'aprobada') ...[
+              OutlinedButton.icon(
+                  onPressed: _recalcular,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Recalcular')),
+              TextButton.icon(
+                  onPressed: _historial,
+                  icon: const Icon(Icons.history),
+                  label: const Text('Historial')),
+              OutlinedButton(
+                  onPressed: _eliminar, child: const Text('Eliminar')),
               FilledButton(
                   onPressed: () => _estado('pagada'),
                   child: const Text('Marcar pagada')),
+            ],
           ]),
         ]),
       ),

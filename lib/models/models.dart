@@ -178,6 +178,7 @@ class Nomina {
       totalAporteLopcymat,
       totalAporteInce;
   final double? tasaBcv;
+  final DateTime? tasaFecha;
 
   Nomina.fromJson(Map<String, dynamic> j)
       : id = j['id'],
@@ -196,7 +197,10 @@ class Nomina {
         totalAporteFaov = _d(j['total_aporte_faov']),
         totalAporteLopcymat = _d(j['total_aporte_lopcymat']),
         totalAporteInce = _d(j['total_aporte_ince']),
-        tasaBcv = j['tasa_bcv'] == null ? null : _d(j['tasa_bcv']);
+        tasaBcv = j['tasa_bcv'] == null ? null : _d(j['tasa_bcv']),
+        tasaFecha = j['tasa_fecha'] == null
+            ? null
+            : DateTime.parse(j['tasa_fecha']);
 }
 
 class QrAsistencia {

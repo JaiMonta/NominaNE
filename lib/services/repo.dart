@@ -126,6 +126,7 @@ class Repo {
           .from('novedades')
           .select(
               '*, empleados(nombres,apellidos), conceptos(codigo,nombre,tipo)')
+          .isFilter('aplicada_nomina_id', null)
           .order('created_at', ascending: false));
 
   static Future<void> agregarNovedad(Map<String, dynamic> n) =>
@@ -162,6 +163,23 @@ class Repo {
     return res is num ? res.toInt() : 0;
   }
 
+  static Future<Map<String, dynamic>> recalcularNomina(
+      String id, double tasa, DateTime fechaTasa) async {
+    final res = await db.rpc('recalcular_nomina', params: {
+      'p_nomina_id': id,
+      'p_tasa': tasa,
+      'p_tasa_fecha': fecha(fechaTasa),
+    });
+    return res is Map ? Map<String, dynamic>.from(res) : <String, dynamic>{};
+  }
+
+  static Future<List<Map<String, dynamic>>> recalculosNomina(String id) async =>
+      List<Map<String, dynamic>>.from(await db
+          .from('nomina_recalculos')
+          .select()
+          .eq('nomina_id', id)
+          .order('created_at', ascending: false));
+
   static Future<void> borrarNomina(String id) =>
       db.from('nominas').delete().eq('id', id);
 
@@ -175,13 +193,16 @@ class Repo {
     required DateTime fin,
     double utilidadesDias = 0,
     String modalidad = 'normal',
+    double? tasaOverride,
+    DateTime? tasaFecha,
   }) async {
-    final tasaBcv = await tasa(fin);
+    final tasaBcv = tasaOverride ?? await tasa(fin);
     if (tasaBcv == null || tasaBcv <= 0) {
       throw StateError('No hay tasa BCV cargada para ${fecha(fin)} ni antes. '
           'Regístrela en la pestaña "Tasas".');
     }
     final t = tasaBcv;
+    final fechaTasaNomina = tasaFecha ?? fin;
     final esContratado = modalidad == 'contratado';
     double bs(double usd) => usd * t;
 
@@ -204,7 +225,10 @@ class Repo {
     // las que comienzan dentro de él. También las recurrentes (inicio null).
     final novTodas = esContratado
         ? <Map<String, dynamic>>[]
-        : List<Map<String, dynamic>>.from(await db.from('novedades').select());
+        : List<Map<String, dynamic>>.from(await db
+            .from('novedades')
+            .select()
+            .isFilter('aplicada_nomina_id', null));
     final nov = novTodas.where((n) {
       final desdeTxt = n['periodo_inicio'] as String?;
       if (desdeTxt == null) return true;
@@ -239,7 +263,7 @@ class Repo {
           'periodo_inicio': fecha(inicio),
           'periodo_fin': fecha(fin),
           'tasa_bcv': tasaBcv,
-          'tasa_fecha': fecha(fin),
+          'tasa_fecha': fecha(fechaTasaNomina),
           'creada_por': db.auth.currentUser?.id,
         })
         .select()
