@@ -653,6 +653,7 @@ class _NominaDetalleState extends State<_NominaDetalle> {
                       Text('FAOV: ${money.format(r.aporteFaov)} Bs'),
                       Text('LOPCYMAT: ${money.format(r.aporteLopcymat)} Bs'),
                       Text('INCES: ${money.format(r.aporteInce)} Bs'),
+                      Text('Pensiones: ${money.format(r.aportePension)} Bs'),
                       Text('Total: ${money.format(r.aportes)} Bs',
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                     ],
@@ -798,7 +799,7 @@ class _NominaDetalleState extends State<_NominaDetalle> {
                         '${n.tasaFecha == null ? '' : ' · ${fecha(n.tasaFecha!)}'}',
                         style: Theme.of(context).textTheme.bodySmall),
                     Text(
-                        'Aportes patronales — IVSS ${money.format(n.totalAporteIvss)} · RPE ${money.format(n.totalAporteRpe)} · FAOV ${money.format(n.totalAporteFaov)} · LOPCYMAT ${money.format(n.totalAporteLopcymat)} · INCES ${money.format(n.totalAporteInce)}  (Total ${money.format(n.totalAportes)})',
+                        'Aportes patronales — IVSS ${money.format(n.totalAporteIvss)} · RPE ${money.format(n.totalAporteRpe)} · FAOV ${money.format(n.totalAporteFaov)} · LOPCYMAT ${money.format(n.totalAporteLopcymat)} · INCES ${money.format(n.totalAporteInce)} · Pensiones ${money.format(n.totalAportePension)}  (Total ${money.format(n.totalAportes)})',
                         style: Theme.of(context).textTheme.bodySmall),
                   ]),
             ),

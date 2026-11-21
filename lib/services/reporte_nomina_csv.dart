@@ -76,6 +76,7 @@ String construirCsvReporte(ReporteNomina reporte) {
       patrono('FAOV patronal', r.aporteFaov);
       patrono('LOPCYMAT patronal', r.aporteLopcymat);
       patrono('INCES patronal', r.aporteInce);
+      patrono('Pensiones patronal', r.aportePension);
     }
   }
 

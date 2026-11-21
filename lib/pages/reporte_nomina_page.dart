@@ -161,6 +161,8 @@ class _ReporteNominaPageState extends State<ReporteNominaPage> {
             0, (s, n) => s + n.nomina.totalAportes);
         final ince = r.nominas.fold<double>(
             0, (s, n) => s + n.nomina.totalAporteInce);
+        final pension = r.nominas.fold<double>(
+            0, (s, n) => s + n.nomina.totalAportePension);
 
         return ListView(
           padding: const EdgeInsets.all(12),
@@ -209,6 +211,7 @@ class _ReporteNominaPageState extends State<ReporteNominaPage> {
               _stat(context, 'Neto', _money.format(neto), Paleta.ingreso),
               _stat(context, 'Aportes', _money.format(aportes), Colors.orange),
               _stat(context, 'INCES', _money.format(ince), Colors.orange),
+              _stat(context, 'Pensiones', _money.format(pension), Colors.orange),
             ]),
             const SizedBox(height: 8),
             Wrap(spacing: 8, runSpacing: 8, children: [

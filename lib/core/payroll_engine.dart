@@ -53,13 +53,15 @@ class ResultadoRecibo {
   final double salarioDiario, totalIngresos, totalEgresos, neto;
   final double aportesPatronales;
   final double aporteIvss, aporteRpe, aporteFaov, aporteLopcymat, aporteInce;
+  final double aportePension;
   ResultadoRecibo(this.lineas, this.salarioDiario, this.totalIngresos,
       this.totalEgresos, this.neto, this.aportesPatronales,
       {this.aporteIvss = 0,
       this.aporteRpe = 0,
       this.aporteFaov = 0,
       this.aporteLopcymat = 0,
-      this.aporteInce = 0});
+      this.aporteInce = 0,
+      this.aportePension = 0});
 
   double get totalIngresoSalarial => r2(lineas
       .where((l) => l.tipo == 'ingreso' && l.esSalarial)
@@ -327,13 +329,22 @@ class PayrollEngine {
     final aInce = aplicaInces
         ? r2(baseSalarial * _g('inces_patrono_pct', .02))
         : 0.0;
-    final aportes = r2(aIvss + aRpe + aFaov + aLop + aInce);
+    // LPPSS: 9% sobre salario + bonos no salariales. El piso mensual por
+    // trabajador (ingreso mínimo integral) se prorratea a la frecuencia.
+    final factorPeriodo = dias / _g('dias_mes', 30);
+    final basePension = max(
+        totalIng0, _g('pension_base_minima_bs', 0) * factorPeriodo);
+    final aPension = soloSueldo
+        ? 0.0
+        : r2(basePension * _g('pension_patrono_pct', .09));
+    final aportes = r2(aIvss + aRpe + aFaov + aLop + aInce + aPension);
 
     return ResultadoRecibo(lineas, r2(sd), totI, totE, r2(totI - totE), aportes,
         aporteIvss: aIvss,
         aporteRpe: aRpe,
         aporteFaov: aFaov,
         aporteLopcymat: aLop,
-        aporteInce: aInce);
+        aporteInce: aInce,
+        aportePension: aPension);
   }
 }

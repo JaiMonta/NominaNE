@@ -24,6 +24,8 @@ Future<Uint8List> buildReporteNominaPdf(ReporteNomina reporte) async {
       reporte.nominas.fold<double>(0, (s, n) => s + n.nomina.totalAportes);
   final totalInce = reporte.nominas.fold<double>(
       0, (s, n) => s + n.nomina.totalAporteInce);
+  final totalPension = reporte.nominas.fold<double>(
+      0, (s, n) => s + n.nomina.totalAportePension);
 
   final resumenNomina = <List<dynamic>>[];
   final resumenAportes = <List<dynamic>>[];
@@ -48,6 +50,7 @@ Future<Uint8List> buildReporteNominaPdf(ReporteNomina reporte) async {
       _money.format(n.totalAporteFaov),
       _money.format(n.totalAporteLopcymat),
       _money.format(n.totalAporteInce),
+      _money.format(n.totalAportePension),
       _money.format(n.totalAportes),
     ]);
 
@@ -93,6 +96,7 @@ Future<Uint8List> buildReporteNominaPdf(ReporteNomina reporte) async {
       patrono('FAOV patronal', r.aporteFaov);
       patrono('LOPCYMAT patronal', r.aporteLopcymat);
       patrono('INCES patronal', r.aporteInce);
+      patrono('Pensiones patronal', r.aportePension);
     }
   }
 
@@ -148,6 +152,7 @@ Future<Uint8List> buildReporteNominaPdf(ReporteNomina reporte) async {
           'FAOV',
           'LOPCYMAT',
           'INCES',
+          'Pensiones',
           'Total',
         ],
         data: resumenAportes,
@@ -190,7 +195,8 @@ Future<Uint8List> buildReporteNominaPdf(ReporteNomina reporte) async {
         'egresos ${_money.format(totalEgresos)} · '
         'neto ${_money.format(totalNeto)} · '
         'aportes patronales ${_money.format(totalAportes)} · '
-        'INCES ${_money.format(totalInce)}',
+        'INCES ${_money.format(totalInce)} · '
+        'pensiones ${_money.format(totalPension)}',
         style: const pw.TextStyle(fontWeight: pw.FontWeight.bold),
       ),
     ],

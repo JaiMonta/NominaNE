@@ -270,7 +270,7 @@ class Repo {
         .single();
 
     double tI = 0, tE = 0, tN = 0, tA = 0;
-    double tIvss = 0, tRpe = 0, tFaov = 0, tLop = 0, tInce = 0;
+    double tIvss = 0, tRpe = 0, tFaov = 0, tLop = 0, tInce = 0, tPension = 0;
     for (final e in emps) {
       // Montos de novedades en USD -> VES (0 = lo calcula el motor).
       final novs = esContratado
@@ -320,6 +320,7 @@ class Repo {
             'aporte_faov_patronal': r.aporteFaov,
             'aporte_lopcymat_patronal': r.aporteLopcymat,
             'aporte_ince_patronal': r.aporteInce,
+            'aporte_pension_patronal': r.aportePension,
           })
           .select()
           .single();
@@ -346,6 +347,7 @@ class Repo {
       tFaov += r.aporteFaov;
       tLop += r.aporteLopcymat;
       tInce += r.aporteInce;
+      tPension += r.aportePension;
     }
     await db.from('nominas').update({
       'total_ingresos': r2(tI),
@@ -357,6 +359,7 @@ class Repo {
       'total_aporte_faov': r2(tFaov),
       'total_aporte_lopcymat': r2(tLop),
       'total_aporte_ince': r2(tInce),
+      'total_aporte_pension': r2(tPension),
     }).eq('id', nom['id']);
     return emps.length;
   }

@@ -423,7 +423,7 @@ void main() {
         );
 
     expect(conSeis().aporteInce, 1751.30);
-    expect(conSeis().aportesPatronales, 1829.30);
+    expect(conSeis().aportesPatronales, 9710.15);
 
     final conCinco = motor.calcular(
       salarioMensual: 87565,
@@ -557,5 +557,89 @@ void main() {
     expect(r.neto, 20431.83);
     expect(r.aportesPatronales, 0);
     expect(r.aporteIvss, 0);
+  });
+
+  test('pensión LPPSS es 9% de salario + bonos no salariales', () {
+    final motor = PayrollEngine({
+      'dias_mes': 30,
+      'pension_patrono_pct': 0.09,
+      'pension_base_minima_bs': 0,
+    });
+    final r = motor.calcular(
+      salarioMensual: 3000,
+      frecuencia: 'mensual',
+      ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 1, 1),
+      periodoFin: DateTime(2026, 1, 31),
+      conceptos: [
+        _concepto('SUELDO', 'ingreso'),
+        _concepto('BONO_ALIM', 'ingreso', esSalarial: false),
+      ],
+      novedades: [EntradaNovedad('BONO_ALIM', 1, 500)],
+    );
+
+    expect(r.totalIngresos, 3500);
+    expect(r.aportePension, 315);
+  });
+
+  test('pensión LPPSS respeta el piso del ingreso mínimo integral', () {
+    final motor = PayrollEngine({
+      'dias_mes': 30,
+      'pension_patrono_pct': 0.09,
+      'pension_base_minima_bs': 2400,
+    });
+    final r = motor.calcular(
+      salarioMensual: 1000,
+      frecuencia: 'mensual',
+      ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 1, 1),
+      periodoFin: DateTime(2026, 1, 31),
+      conceptos: [_concepto('SUELDO', 'ingreso')],
+      novedades: [],
+    );
+
+    expect(r.totalIngresos, 1000);
+    expect(r.aportePension, 216);
+  });
+
+  test('pensión LPPSS prorratea el piso en nómina quincenal', () {
+    final motor = PayrollEngine({
+      'dias_mes': 30,
+      'pension_patrono_pct': 0.09,
+      'pension_base_minima_bs': 2400,
+    });
+    final r = motor.calcular(
+      salarioMensual: 1000,
+      frecuencia: 'quincenal',
+      ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 1, 1),
+      periodoFin: DateTime(2026, 1, 15),
+      conceptos: [_concepto('SUELDO', 'ingreso')],
+      novedades: [],
+    );
+
+    // Piso 2400 * 15/30 = 1200; 9% = 108.
+    expect(r.aportePension, 108);
+  });
+
+  test('pensión LPPSS no aplica a contratados (soloSueldo)', () {
+    final motor = PayrollEngine({
+      'dias_mes': 30,
+      'pension_patrono_pct': 0.09,
+      'pension_base_minima_bs': 2400,
+    });
+    final r = motor.calcular(
+      salarioMensual: 1000,
+      frecuencia: 'mensual',
+      ingreso: DateTime(2020, 1, 1),
+      periodoInicio: DateTime(2026, 1, 1),
+      periodoFin: DateTime(2026, 1, 31),
+      conceptos: [_concepto('SUELDO', 'ingreso')],
+      novedades: [],
+      soloSueldo: true,
+    );
+
+    expect(r.aportePension, 0);
+    expect(r.aportesPatronales, 0);
   });
 }

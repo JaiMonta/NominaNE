@@ -35,6 +35,7 @@ recibos de pago en USD y Bolívares (VES) a la tasa del BCV, y aportes patronale
 - `supabase/migrations/018_liquidaciones_prestaciones.sql`
 - `supabase/migrations/019_inicializar_liquidaciones.sql`
 - `supabase/migrations/020_empleado_liquidaciones_trigger.sql`
+- `supabase/migrations/021_aportes_pension_lppss.sql`
 3. En *Authentication → URL Configuration* agrega tu dominio (ej.
    `https://nomina-ne.web.app`) en **Site URL** y **Additional Redirect URLs**.
    Para pruebas, en *Authentication → Providers → Email* puedes desactivar la
@@ -82,6 +83,14 @@ RPE trabajador 0,5% y RPE patrono 2%. Con `tope_mensual_aportes_bs = 0` se
 desactiva el tope. En meses de 4/5 lunes el IVSS trabajador resulta 24/30 Bs.
 El INCES patronal (2%) se incluye solo en nómina de fijos cuando hay más de 5
 trabajadores fijos activos (`inces_min_trabajadores`).
+
+La **Contribución Especial de Protección de Pensiones (LPPSS)** se calcula al
+9% (`pension_patrono_pct`) sobre el total de salario y bonificaciones no
+salariales del período. Es un aporte exclusivo del patrono (no se descuenta al
+trabajador) y no aplica a la nómina de contratados. Por cada trabajador la base
+no debe ser menor al ingreso mínimo integral: configura
+`pension_base_minima_bs` con ese monto mensual (0 = sin piso); en nóminas
+semanales o quincenales el piso se prorratea según la frecuencia.
 
 ## Asistencia
 La pestaña **Asistencia** tiene dos vistas:
@@ -161,7 +170,7 @@ firebase deploy --only hosting
 `firebase.json` sirve `build/web` con rewrite SPA.
 
 ## Validación rápida
-- [ ] Migraciones 001 a 020 aplicadas.
+- [ ] Migraciones 001 a 021 aplicadas.
 - [ ] Dominio de Firebase agregado en Supabase Auth.
 - [ ] Tasa BCV del día cargada en *Tasas*.
 - [ ] Nombre/RIF de la empresa en *Parámetros*.

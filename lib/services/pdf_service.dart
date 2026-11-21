@@ -391,6 +391,8 @@ pw.Widget _reciboWidget({
                 style: small),
             pw.Text('INCES: ${_money.format(recibo.aporteInce)} Bs',
                 style: small),
+            pw.Text('Pensiones (LPPSS): ${_money.format(recibo.aportePension)} Bs',
+                style: small),
             pw.Text('Total aportes: ${_money.format(recibo.aportes)} Bs',
                 style: bold),
           ]),
